@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """動画を組み立てる。
 
-    python -m src.build --item 3   # 3項目目だけ。間の取り方を詰めるとき用
+    python -m src.build --item 3     # 3項目目だけ
+    python -m src.build --item 2-4   # 範囲。項目間の間を見るとき用
     python -m src.build            # 通し
     python -m src.build --no-endcard
 
@@ -89,7 +90,18 @@ def illustration_for(index: int, manifest: dict):
     return Image.open(path).convert("RGBA"), entry.get("attribution")
 
 
-def plan(script: dict, only: int | None) -> tuple[list[Scene], list[Cue]]:
+def parse_range(spec: str | None) -> tuple[int, int] | None:
+    """--item の指定を (最初, 最後) にする。"3" でも "2-4" でも受ける。"""
+    if not spec:
+        return None
+    if "-" in spec:
+        first, last = (int(v) for v in spec.split("-", 1))
+    else:
+        first = last = int(spec)
+    return first, last
+
+
+def plan(script: dict, only: tuple[int, int] | None) -> tuple[list[Scene], list[Cue]]:
     """絵の並びと音の位置を決める。ここだけ読めば構成がわかるようにしてある。"""
     manifest = load_manifest()
     scenes: list[Scene] = []
@@ -98,9 +110,10 @@ def plan(script: dict, only: int | None) -> tuple[list[Scene], list[Cue]]:
 
     items = list(enumerate(script["items"], start=1))
     if only is not None:
-        items = [(i, item) for i, item in items if i == only]
+        first, last = only
+        items = [(i, item) for i, item in items if first <= i <= last]
         if not items:
-            raise BuildError(f"--item {only} は台本にありません")
+            raise BuildError(f"--item {first}-{last} に該当する項目がありません")
 
     # タイトルと各項目に背景を割り当てる。項目ごとに別のクリップになる
     backgrounds = layout.background_order(len(items) + (0 if only else 1))
@@ -303,10 +316,15 @@ def render(scenes: list[Scene], audio_path: Path, out_path: Path, fps: int,
     from moviepy import AudioFileClip, VideoFileClip, concatenate_videoclips
 
     segments = []
+    # 元クリップの参照を書き出しが終わるまで保持する。手放すと GC されたときに
+    # 裏の ffmpeg プロセスが閉じられ、切り出したほうを読む段で
+    # 「ハンドルが無効です」で落ちる
+    sources = []
     for scene in scenes:
         # 背景はシーンにつき1本。画面が切り替わっても頭出しに戻らないよう、
         # 同じクリップの続きを切り出していく
         source = _background_clip(scene.background, scene.duration)
+        sources.append(source)
         offset = 0.0
         for overlay, duration in scene.states:
             part = source.subclipped(offset, offset + duration)
@@ -327,12 +345,14 @@ def render(scenes: list[Scene], audio_path: Path, out_path: Path, fps: int,
                           preset="medium", threads=4, logger="bar")
     video.close()
     track.close()
+    for source in sources:
+        source.close()
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--item", type=int, help="この項目だけ書き出す (1始まり)")
+    parser.add_argument("--item", help="この項目だけ書き出す。範囲も可 (例: 3 / 2-4)")
     parser.add_argument("--no-endcard", action="store_true", help="エンドカードを付けない")
     parser.add_argument("--fps", type=int, default=config.FPS)
     parser.add_argument("-o", "--out", type=Path)
@@ -340,13 +360,14 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         script = load_script()
-        scenes, cues = plan(script, args.item)
+        selection = parse_range(args.item)
+        scenes, cues = plan(script, selection)
     except BuildError as exc:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1
 
     body = sum(scene.duration for scene in scenes)
-    endcard = not args.no_endcard and args.item is None and config.ENDCARD.exists()
+    endcard = not args.no_endcard and selection is None and config.ENDCARD.exists()
     endcard_len = 0.0
     if endcard:
         from moviepy import VideoFileClip
@@ -365,7 +386,7 @@ def main(argv: list[str] | None = None) -> int:
 
     audio_path = build_audio(cues, total, body if endcard else None,
                              config.OUT_DIR / "audio" / "_mix.wav")
-    suffix = f"_item{args.item:02d}" if args.item else ""
+    suffix = f"_item{args.item}" if args.item else ""
     out = args.out or (config.OUT_DIR / f"video{suffix}.mp4")
 
     started = time.time()

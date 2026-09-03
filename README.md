@@ -27,8 +27,9 @@ python -m src.voice --force   # 変わっていなくても作り直す
 動画:
 
 ```bash
-python -m src.build --item 3   # 3項目目だけ。間の取り方を詰めるとき用
-python -m src.build            # 通し (37秒で約3.5分)
+python -m src.build --item 3     # 3項目目だけ
+python -m src.build --item 2-4   # 範囲。項目間の間を見るとき用(16秒で約2分)
+python -m src.build              # 通し (44秒で約4.5分)
 python -m src.build --no-endcard
 ```
 
