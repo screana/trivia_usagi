@@ -22,7 +22,9 @@ AUDIO_DIR = OUT_DIR / "audio"
 BG_CACHE = OUT_DIR / "bg"
 
 # 立ち絵は第三者の配布素材なので、リポジトリの外を参照する
-MASCOT = ROOT.parent / "VOICEBOX" / "素材" / "うさぎ" / "中国うさぎ立ち絵素材2_0000.png"
+TACHIE_DIR = ROOT.parent / "VOICEBOX" / "素材" / "うさぎ"
+TACHIE_PSD = TACHIE_DIR / "psd" / "中国うさぎ立ち絵素材2.0.psd"
+MASCOT = TACHIE_DIR / "中国うさぎ立ち絵素材2_0000.png"
 # BGM。曲名を /publish のクレジットに使うので、置かれたファイル名のまま扱う
 _BGM_FILES = sorted((ROOT / "assets").glob("*.mp3"))
 BGM = _BGM_FILES[0] if _BGM_FILES else ROOT / "assets" / "bgm.mp3"
@@ -84,6 +86,22 @@ MASCOT_FLIP = True             # 左右反転。画面の内側(右)を向かせ
 
 TITLE_SIZE = 105
 TITLE_Y = 620
+
+# 表情の組み合わせ。src/tachie.py が PSD から書き出す。
+# 選べる名前は `python -m src.tachie --list` で見られる。
+# 衣装は既定(巫女服)のまま。顔まわりだけを切り替えている。
+# 基本の姿勢。配布されている中立PNGと同じポーズ(いなば抱え + 右腕を横に)。
+# 表情差分を混ぜても体が揃うようにここで固定している
+BASE_POSE = {"左腕": "いなば抱え", "右腕": "横"}
+
+EXPRESSIONS = {
+    "通常":   {**BASE_POSE, "目": "基本目セット", "口": "ん",     "眉": "普通眉"},
+    "笑顔":   {**BASE_POSE, "目": "にっこり",    "口": "あは",   "眉": "普通眉"},
+    "驚き":   {**BASE_POSE, "目": "◯◯",        "口": "わあ",   "眉": "上がり眉", "記号など": "汗"},
+    "困り":   {**BASE_POSE, "目": "ジト目",      "口": "うへー", "眉": "困り眉",   "記号など": "汗"},
+    "得意":   {**BASE_POSE, "目": "なごみ目",    "口": "にやり", "眉": "普通眉"},
+    "感心":   {**BASE_POSE, "目": "うっとり",    "口": "ほほえみ", "眉": "普通眉"},
+}
 
 # --------------------------------------------------------------------- 音声
 

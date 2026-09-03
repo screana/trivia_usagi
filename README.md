@@ -70,6 +70,7 @@ src/
   layout.py           # 描画。preview と build で共用
   preview.py          # 静止画1枚
   voice.py            # VOICEVOX。読みの検証もここ
+  tachie.py           # 立ち絵PSDから表情差分を書き出す
   build.py            # 動画の組み立て
   fetch.py            # いらすとやからイラストを取得
 ```
@@ -96,6 +97,7 @@ src/
 | VOICEVOX クライアント | voicevox-client (PyPI v1.1.0 / 2025-08 更新) | **不採用**。audio_query と synthesis しか包んでおらず、必要な `/speakers`(名前→style_id解決)と `/accent_phrases`(voicecheck用)が無い。async専用な点も噛み合わない |
 | 音声処理・ダッキング | pydub (最終リリース 2021-03) | **不採用**。5年更新が止まっている。numpy で足りる範囲 |
 | テキストの縁取り | Pillow の `stroke_width` | **採用**。自前で描かない |
+| PSD の読み書き | **psd-tools** (PyPI v1.19.0 / 2026-09 更新) | **採用**。PSDTool 互換の素材をそのまま扱える。pytoshop(2018年で更新停止)は書き込み用途で今回は不要 |
 | いらすとや検索 | Blogger の公開フィード | **採用**。サイトのHTMLを解析せずにキーワード検索できる |
 | 円形マスク | Pillow の `ImageDraw.ellipse` + `paste(mask)` | **採用**。ライブラリ不要 |
 
