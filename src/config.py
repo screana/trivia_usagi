@@ -18,10 +18,14 @@ IMAGES_DIR = ROOT / "assets" / "images"
 MANIFEST = IMAGES_DIR / "manifest.json"
 OUT_DIR = ROOT / "out"
 AUDIO_DIR = OUT_DIR / "audio"
+# 背景素材を縦型に変換したもの。毎回変換すると書き出しが数倍遅くなるので貯める
+BG_CACHE = OUT_DIR / "bg"
 
 # 立ち絵は第三者の配布素材なので、リポジトリの外を参照する
 MASCOT = ROOT.parent / "VOICEBOX" / "素材" / "うさぎ" / "中国うさぎ立ち絵素材2_0000.png"
-BGM = ROOT / "assets" / "bgm.mp3"          # 無ければ BGM なしで書き出す
+# BGM。曲名を /publish のクレジットに使うので、置かれたファイル名のまま扱う
+_BGM_FILES = sorted((ROOT / "assets").glob("*.mp3"))
+BGM = _BGM_FILES[0] if _BGM_FILES else ROOT / "assets" / "bgm.mp3"
 ENDCARD = ROOT / "assets" / "endcard.mp4"
 # 背景に流す動画。順に使い、足りなければ先頭に戻る
 BACKGROUNDS = sorted((ROOT / "assets").glob("AdobeStock_*.mov"))

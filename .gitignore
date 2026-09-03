@@ -12,8 +12,10 @@ assets/mascot.png
 assets/images/*
 !assets/images/manifest.json
 
-# BGM。配布元の規約がある。
-assets/bgm.mp3
+# BGM。配布元の規約がある。ファイル名は曲名のまま置かれるので拡張子で弾く。
+assets/*.mp3
+assets/*.wav
+assets/*.m4a
 
 # エンドカード動画・背景動画。サイズが大きく、ストック素材はライセンス品。
 assets/endcard.mp4

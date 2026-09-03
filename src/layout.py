@@ -148,19 +148,30 @@ def fit_cover(image: Image.Image) -> Image.Image:
     return scaled.crop((left, top, left + config.WIDTH, top + config.HEIGHT))
 
 
-def base(background: Image.Image | None = None) -> Image.Image:
-    """下地。背景動画のコマを渡すとその上に白いベールを敷く。
-
-    黒文字+白フチだけでは映像の上で読みにくいので、ベールで背景を抜く。
-    濃さは config.SCRIM_ALPHA。
-    """
-    if background is None:
-        return Image.new("RGBA", (config.WIDTH, config.HEIGHT), config.BG)
-
-    canvas = fit_cover(background.convert("RGBA"))
+def _scrim() -> Image.Image | None:
+    """背景を抜くための白いベール。黒文字+白フチだけでは映像の上で読みにくい。"""
     alpha = int(round(255 * config.SCRIM_ALPHA))
-    if alpha > 0:
-        scrim = Image.new("RGBA", (config.WIDTH, config.HEIGHT), config.SCRIM_COLOR + (alpha,))
+    if alpha <= 0:
+        return None
+    return Image.new("RGBA", (config.WIDTH, config.HEIGHT), config.SCRIM_COLOR + (alpha,))
+
+
+def base(background: Image.Image | None = None, *, overlay: bool = False) -> Image.Image:
+    """下地を作る。
+
+    overlay=True なら透明な下地にベールだけ敷いて返す。動画に重ねる用。
+    こうすると build は「動画の上にこの1枚を合成するだけ」で済み、
+    プレビューと本番で描画ロジックが分かれない。
+    """
+    if overlay:
+        canvas = Image.new("RGBA", (config.WIDTH, config.HEIGHT), (0, 0, 0, 0))
+    elif background is None:
+        return Image.new("RGBA", (config.WIDTH, config.HEIGHT), config.BG)
+    else:
+        canvas = fit_cover(background.convert("RGBA"))
+
+    scrim = _scrim()
+    if scrim is not None:
         canvas.alpha_composite(scrim)
     return canvas
 
@@ -182,8 +193,9 @@ def _centered_bottom(canvas: Image.Image, block: Image.Image, bottom: int) -> No
     canvas.alpha_composite(block, ((canvas.width - block.width) // 2, bottom - block.height))
 
 
-def render_title(title: str, background: Image.Image | None = None) -> Image.Image:
-    canvas = base(background)
+def render_title(title: str, background: Image.Image | None = None,
+                 *, overlay: bool = False) -> Image.Image:
+    canvas = base(background, overlay=overlay)
     paste_mascot(canvas)
     _centered(canvas, text_block(
         title, config.TITLE_SIZE, fill=config.TEXT, stroke=config.TEXT_STROKE,
@@ -194,12 +206,13 @@ def render_title(title: str, background: Image.Image | None = None) -> Image.Ima
 
 
 def render_item(setup: str, punch: str | None, illustration: Image.Image | None,
-                attribution: str | None, background: Image.Image | None = None) -> Image.Image:
+                attribution: str | None, background: Image.Image | None = None,
+                *, overlay: bool = False) -> Image.Image:
     """1項目の画面。punch が None なら振りだけの状態を描く。
 
     出典表記の有無で他の要素の位置は変えない(座標は固定)。
     """
-    canvas = base(background)
+    canvas = base(background, overlay=overlay)
     paste_mascot(canvas)
 
     _centered_bottom(canvas, text_block(
