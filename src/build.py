@@ -358,6 +358,10 @@ def main(argv: list[str] | None = None) -> int:
     print("シーン %d / 本編 %.2fs%s = 合計 %.2fs"
           % (len(scenes), body,
              (" + エンドカード %.2fs" % endcard_len) if endcard else "", total))
+    # どの素材を使ったかを出す。差し替えたのに反映されていない、を防ぐため
+    print("  BGM         : %s" % (config.BGM.name if config.BGM.exists() else "なし"))
+    print("  エンドカード: %s" % (f"{config.ENDCARD.name} ({endcard_len:.2f}s)"
+                                  if endcard else "なし"))
 
     audio_path = build_audio(cues, total, body if endcard else None,
                              config.OUT_DIR / "audio" / "_mix.wav")
