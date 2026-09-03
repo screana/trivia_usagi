@@ -94,12 +94,32 @@ def circular(image: Image.Image, diameter: int) -> Image.Image:
     return out
 
 
-@functools.lru_cache(maxsize=1)
-def _mascot() -> Image.Image | None:
-    if not config.MASCOT.exists():
+def mascot_path(expression: str | None):
+    """表情名から立ち絵のパスを返す。無ければ PSD から作る。"""
+    if not expression:
+        return config.MASCOT if config.MASCOT.exists() else None
+    path = config.TACHIE_DIR / f"{expression}.png"
+    if not path.exists():
+        from . import tachie
+
+        if expression not in config.EXPRESSIONS:
+            raise ValueError(
+                f"表情 '{expression}' は未定義です。使えるのは {', '.join(config.EXPRESSIONS)}"
+            )
+        tachie.save(config.EXPRESSIONS[expression], path)
+    return path
+
+
+@functools.lru_cache(maxsize=8)
+def _mascot(expression: str | None = None) -> Image.Image | None:
+    path = mascot_path(expression)
+    if path is None:
         return None
-    image = Image.open(config.MASCOT).convert("RGBA")
-    image = image.crop(image.getbbox())
+    image = Image.open(path).convert("RGBA")
+    # 切り抜きは表情によらず同じ位置にする。表情ごとの bbox で切ると
+    # 切り替わりで立ち絵が跳ねる(いまの素材はすべて一致しているが、
+    # 記号を足した表情を増やしたときに崩れないよう固定しておく)
+    image = image.crop(config.MASCOT_CROP)
     if config.MASCOT_FLIP:
         image = image.transpose(Image.FLIP_LEFT_RIGHT)
     height = config.MASCOT_HEIGHT
@@ -198,9 +218,9 @@ def base(background: Image.Image | None = None, *, overlay: bool = False) -> Ima
     return canvas
 
 
-def paste_mascot(canvas: Image.Image) -> None:
+def paste_mascot(canvas: Image.Image, expression: str | None = None) -> None:
     """中国うさぎをタイトルから最後まで左下に出す。"""
-    mascot = _mascot()
+    mascot = _mascot(expression)
     if mascot is not None:
         canvas.alpha_composite(mascot, (config.MASCOT_X, config.MASCOT_BOTTOM - mascot.height))
 
@@ -216,9 +236,9 @@ def _centered_bottom(canvas: Image.Image, block: Image.Image, bottom: int) -> No
 
 
 def render_title(title: str, background: Image.Image | None = None,
-                 *, overlay: bool = False) -> Image.Image:
+                 *, overlay: bool = False, expression: str | None = None) -> Image.Image:
     canvas = base(background, overlay=overlay)
-    paste_mascot(canvas)
+    paste_mascot(canvas, expression)
     _centered(canvas, text_block(
         title, config.TITLE_SIZE, fill=config.TEXT, stroke=config.TEXT_STROKE,
         stroke_width=config.STROKE_WIDTH + 2, max_width=config.TEXT_MAX_WIDTH,
@@ -229,13 +249,13 @@ def render_title(title: str, background: Image.Image | None = None,
 
 def render_item(setup: str, punch: str | None, illustration: Image.Image | None,
                 attribution: str | None, background: Image.Image | None = None,
-                *, overlay: bool = False) -> Image.Image:
+                *, overlay: bool = False, expression: str | None = None) -> Image.Image:
     """1項目の画面。punch が None なら振りだけの状態を描く。
 
     出典表記の有無で他の要素の位置は変えない(座標は固定)。
     """
     canvas = base(background, overlay=overlay)
-    paste_mascot(canvas)
+    paste_mascot(canvas, expression)
 
     _centered_bottom(canvas, text_block(
         setup, config.FONT_SIZE, fill=config.TEXT, stroke=config.TEXT_STROKE,

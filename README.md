@@ -93,6 +93,11 @@ src/
 1項目は2枚の画面でできている。**振りとイラストを同時に出す → 溜めてオチを足す。**
 オチが出るのは振りを読み終えてから(`REVEAL_GAP` の 0.9 秒)。
 
+**オチと同時にうさぎの顔が変わる**(`MASCOT_EXPRESSION` → `MASCOT_EXPRESSION_PUNCH`)。
+表情は PSD から作ったものを使う。切り抜き位置を `MASCOT_CROP` で固定してあるので、
+表情を変えても体は1ピクセルも動かない(表情ごとの外接矩形で切ると、記号を足した
+表情を混ぜたときに立ち絵が跳ねる)。
+
 画面は `layout.py` が**透過1枚**として作り、背景動画に重ねるだけにしている。
 プレビューと本番で描画ロジックが分かれないようにするため。
 
@@ -185,7 +190,8 @@ BGM は読み上げ中だけ `BGM_DUCK` まで下げ、**エンドカードの�
 | --- | --- |
 | 文字の大きさ・位置 | `FONT_SIZE` / `SETUP_BOTTOM` / `PUNCH_Y` |
 | イラストの円 | `CIRCLE_CENTER_Y` / `CIRCLE_DIAMETER` |
-| うさぎの位置・大きさ | `MASCOT_*` |
+| うさぎの位置・大きさ | `MASCOT_X` / `MASCOT_BOTTOM` / `MASCOT_HEIGHT` |
+| うさぎの表情 | `MASCOT_EXPRESSION`(振り) / `MASCOT_EXPRESSION_PUNCH`(オチ) |
 | 間の取り方 | `REVEAL_GAP`(振り→オチ) / `ITEM_GAP`(項目間) |
 | 背景の見え方 | `SCRIM_ALPHA` / `BG_SHUFFLE_SEED` |
 | BGM | `BGM_VOLUME` / `BGM_DUCK` / `BGM_FADE_OUT` |

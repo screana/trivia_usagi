@@ -57,7 +57,8 @@ def main(argv: list[str] | None = None) -> int:
     background = None if args.no_bg else layout.background_frame(0 if args.title else args.item - 1)
 
     if args.title:
-        image = layout.render_title(script["title"], background=background)
+        image = layout.render_title(script["title"], background=background,
+                                    expression=config.MASCOT_EXPRESSION)
         label = "タイトルカード"
     else:
         items = script.get("items") or []
@@ -71,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
             illustration=illustration,
             attribution=attribution,
             background=background,
+            expression=(config.MASCOT_EXPRESSION if args.no_punch
+                        else config.MASCOT_EXPRESSION_PUNCH),
         )
         label = f"{args.item}項目目: {item['setup']} / {item['punch']}"
 

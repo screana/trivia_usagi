@@ -83,6 +83,11 @@ MASCOT_X = 150                 # 立ち絵の左端
 MASCOT_BOTTOM = 1790           # 立ち絵の下端
 MASCOT_HEIGHT = 420
 MASCOT_FLIP = True             # 左右反転。画面の内側(右)を向かせる
+# 立ち絵の切り抜き位置。表情を切り替えても位置がズレないよう固定する
+MASCOT_CROP = (175, 185, 935, 1863)
+# オチが出た瞬間にうさぎの顔を変える。振りのあいだは MASCOT_EXPRESSION
+MASCOT_EXPRESSION = "通常"
+MASCOT_EXPRESSION_PUNCH = "驚き"
 
 TITLE_SIZE = 105
 TITLE_Y = 620

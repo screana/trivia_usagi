@@ -7,6 +7,7 @@
     python -m src.build --no-endcard
 
 1項目の流れは 振りとイラストを同時に表示・読み上げ → 溜め → オチ表示・読み上げ。
+オチが出るのと同時に、うさぎの顔も反応する表情に変わる。
 画面は layout.py が透過1枚として作り、背景動画の上に合成するだけにしている
 (プレビューと本番で絵がズレないようにするため)。
 
@@ -119,7 +120,8 @@ def plan(script: dict, only: tuple[int, int] | None) -> tuple[list[Scene], list[
     backgrounds = layout.background_order(len(items) + (0 if only else 1))
     if only is None:
         scenes.append(Scene(backgrounds[0],
-                            [(layout.render_title(script["title"], overlay=True),
+                            [(layout.render_title(script["title"], overlay=True,
+                                                  expression=config.MASCOT_EXPRESSION),
                               config.TITLE_DURATION)]))
         clock += config.TITLE_DURATION
         backgrounds = backgrounds[1:]
@@ -139,12 +141,13 @@ def plan(script: dict, only: tuple[int, int] | None) -> tuple[list[Scene], list[
         cues.append(Cue(punch_wav, clock + setup_len + config.REVEAL_GAP))
 
         # 振りとイラストは同時に出し、溜めを置いてからオチを足す。
-        # 背景は2枚を通して繋がっている
+        # オチと同時にうさぎの顔も変える。背景は2枚を通して繋がっている
         scenes.append(Scene(background, [
-            (layout.render_item(item["setup"], None, illustration, attribution, overlay=True),
+            (layout.render_item(item["setup"], None, illustration, attribution, overlay=True,
+                                expression=config.MASCOT_EXPRESSION),
              setup_len + config.REVEAL_GAP),
             (layout.render_item(item["setup"], item["punch"], illustration, attribution,
-                                overlay=True), tail),
+                                overlay=True, expression=config.MASCOT_EXPRESSION_PUNCH), tail),
         ]))
         clock += setup_len + config.REVEAL_GAP + tail
 
