@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import functools
+import random
 from pathlib import Path
 
 import budoux
@@ -106,11 +107,32 @@ def _mascot() -> Image.Image | None:
     return image.resize((width, height), Image.LANCZOS)
 
 
-def background_path(index: int):
-    """項目番号(0始まり)に対して使う背景クリップ。本数が足りなければ先頭に戻る。"""
+def background_order(count: int):
+    """背景クリップを何番目の項目に割り当てるかを決める。
+
+    順番に使うと並びが読めてしまうのでシャッフルする。素材より項目が多いときは
+    一巡ごとに切り直し、**隣り合う項目が同じクリップにならない**ようにする
+    (同じ映像が続くと切り替わったように見えないため)。
+
+    毎回変わると書き出しを見比べられないので、種は config に固定してある。
+    """
     if not config.BACKGROUNDS:
-        return None
-    return config.BACKGROUNDS[index % len(config.BACKGROUNDS)]
+        return [None] * count
+
+    rng = random.Random(config.BG_SHUFFLE_SEED)
+    order: list = []
+    while len(order) < count:
+        deck = list(config.BACKGROUNDS)
+        rng.shuffle(deck)
+        if order and len(deck) > 1 and deck[0] == order[-1]:
+            deck.append(deck.pop(0))
+        order.extend(deck)
+    return order[:count]
+
+
+def background_path(index: int):
+    """項目番号(0始まり)に対して使う背景クリップ。"""
+    return background_order(index + 1)[index]
 
 
 def background_frame(index: int, seconds: float = 2.0) -> Image.Image | None:

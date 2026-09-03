@@ -29,6 +29,9 @@ BGM = _BGM_FILES[0] if _BGM_FILES else ROOT / "assets" / "bgm.mp3"
 ENDCARD = ROOT / "assets" / "endcard.mp4"
 # 背景に流す動画。順に使い、足りなければ先頭に戻る
 BACKGROUNDS = sorted((ROOT / "assets").glob("AdobeStock_*.mov"))
+# 背景の並び順を決める種。変えると割り当てが変わる。固定なのは書き出しを
+# 見比べられるようにするため
+BG_SHUFFLE_SEED = 7
 
 # --------------------------------------------------------------------- 色
 

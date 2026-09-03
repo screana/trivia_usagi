@@ -5,7 +5,7 @@
     python -m src.build            # 通し
     python -m src.build --no-endcard
 
-1項目の流れは 振り表示・読み上げ → イラスト表示 → オチ表示・読み上げ。
+1項目の流れは 振りとイラストを同時に表示・読み上げ → 溜め → オチ表示・読み上げ。
 画面は layout.py が透過1枚として作り、背景動画の上に合成するだけにしている
 (プレビューと本番で絵がズレないようにするため)。
 
@@ -39,12 +39,19 @@ class BuildError(Exception):
 
 
 @dataclass
-class Shot:
-    """画面1枚ぶん。背景クリップの上に overlay を出す。"""
+class Scene:
+    """背景クリップ1本ぶん。1項目=1シーンで、その中で画面だけが切り替わる。
 
-    overlay: Image.Image
-    duration: float
+    画面ごとに背景を取り直すと毎回頭出しに戻り、止まったり動いたりして見える。
+    シーン単位で同じクリップの続きを切り出すことで、項目のあいだ通して流れる。
+    """
+
     background: Path | None
+    states: list[tuple[Image.Image, float]]   # (重ねる画像, 表示時間)
+
+    @property
+    def duration(self) -> float:
+        return sum(duration for _, duration in self.states)
 
 
 @dataclass
@@ -82,10 +89,10 @@ def illustration_for(index: int, manifest: dict):
     return Image.open(path).convert("RGBA"), entry.get("attribution")
 
 
-def plan(script: dict, only: int | None) -> tuple[list[Shot], list[Cue]]:
+def plan(script: dict, only: int | None) -> tuple[list[Scene], list[Cue]]:
     """絵の並びと音の位置を決める。ここだけ読めば構成がわかるようにしてある。"""
     manifest = load_manifest()
-    shots: list[Shot] = []
+    scenes: list[Scene] = []
     cues: list[Cue] = []
     clock = 0.0
 
@@ -94,13 +101,17 @@ def plan(script: dict, only: int | None) -> tuple[list[Shot], list[Cue]]:
         items = [(i, item) for i, item in items if i == only]
         if not items:
             raise BuildError(f"--item {only} は台本にありません")
-    else:
-        shots.append(Shot(layout.render_title(script["title"], overlay=True),
-                          config.TITLE_DURATION, layout.background_path(0)))
-        clock += config.TITLE_DURATION
 
-    for i, item in items:
-        background = layout.background_path(i - 1)
+    # タイトルと各項目に背景を割り当てる。項目ごとに別のクリップになる
+    backgrounds = layout.background_order(len(items) + (0 if only else 1))
+    if only is None:
+        scenes.append(Scene(backgrounds[0],
+                            [(layout.render_title(script["title"], overlay=True),
+                              config.TITLE_DURATION)]))
+        clock += config.TITLE_DURATION
+        backgrounds = backgrounds[1:]
+
+    for (i, item), background in zip(items, backgrounds):
         illustration, attribution = illustration_for(i - 1, manifest)
         setup_wav = config.AUDIO_DIR / f"{i:02d}_setup.wav"
         punch_wav = config.AUDIO_DIR / f"{i:02d}_punch.wav"
@@ -109,28 +120,22 @@ def plan(script: dict, only: int | None) -> tuple[list[Shot], list[Cue]]:
                 raise BuildError(f"音声がありません: {path}\n  python -m src.voice で作ってください")
 
         setup_len, punch_len = wav_duration(setup_wav), wav_duration(punch_wav)
-
-        # 振りだけ / イラストを足す / オチを足す の3枚
-        cues.append(Cue(setup_wav, clock))
-        shots.append(Shot(
-            layout.render_item(item["setup"], None, None, None, overlay=True),
-            setup_len, background))
-        clock += setup_len
-
-        shots.append(Shot(
-            layout.render_item(item["setup"], None, illustration, attribution, overlay=True),
-            config.REVEAL_GAP, background))
-        clock += config.REVEAL_GAP
-
-        cues.append(Cue(punch_wav, clock))
         tail = punch_len + (config.ITEM_GAP if i != items[-1][0] else config.TAIL)
-        shots.append(Shot(
-            layout.render_item(item["setup"], item["punch"], illustration, attribution,
-                               overlay=True),
-            tail, background))
-        clock += tail
 
-    return shots, cues
+        cues.append(Cue(setup_wav, clock))
+        cues.append(Cue(punch_wav, clock + setup_len + config.REVEAL_GAP))
+
+        # 振りとイラストは同時に出し、溜めを置いてからオチを足す。
+        # 背景は2枚を通して繋がっている
+        scenes.append(Scene(background, [
+            (layout.render_item(item["setup"], None, illustration, attribution, overlay=True),
+             setup_len + config.REVEAL_GAP),
+            (layout.render_item(item["setup"], item["punch"], illustration, attribution,
+                                overlay=True), tail),
+        ]))
+        clock += setup_len + config.REVEAL_GAP + tail
+
+    return scenes, cues
 
 
 # --------------------------------------------------------------------- 音声
@@ -293,14 +298,20 @@ def _blend(background, overlay: Image.Image):
     return VideoClip(make_frame, duration=background.duration)
 
 
-def render(shots: list[Shot], audio_path: Path, out_path: Path, fps: int,
+def render(scenes: list[Scene], audio_path: Path, out_path: Path, fps: int,
            endcard: bool) -> None:
     from moviepy import AudioFileClip, VideoFileClip, concatenate_videoclips
 
     segments = []
-    for shot in shots:
-        background = _background_clip(shot.background, shot.duration)
-        segments.append(_blend(background, shot.overlay).with_duration(shot.duration))
+    for scene in scenes:
+        # 背景はシーンにつき1本。画面が切り替わっても頭出しに戻らないよう、
+        # 同じクリップの続きを切り出していく
+        source = _background_clip(scene.background, scene.duration)
+        offset = 0.0
+        for overlay, duration in scene.states:
+            part = source.subclipped(offset, offset + duration)
+            segments.append(_blend(part, overlay).with_duration(duration))
+            offset += duration
 
     if endcard and config.ENDCARD.exists():
         segments.append(_vertical(VideoFileClip(str(config.ENDCARD)).without_audio()))
@@ -329,12 +340,12 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         script = load_script()
-        shots, cues = plan(script, args.item)
+        scenes, cues = plan(script, args.item)
     except BuildError as exc:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1
 
-    body = sum(shot.duration for shot in shots)
+    body = sum(scene.duration for scene in scenes)
     endcard = not args.no_endcard and args.item is None and config.ENDCARD.exists()
     endcard_len = 0.0
     if endcard:
@@ -344,8 +355,8 @@ def main(argv: list[str] | None = None) -> int:
             endcard_len = clip.duration
 
     total = body + endcard_len
-    print("画面 %d 枚 / 本編 %.2fs%s = 合計 %.2fs"
-          % (len(shots), body,
+    print("シーン %d / 本編 %.2fs%s = 合計 %.2fs"
+          % (len(scenes), body,
              (" + エンドカード %.2fs" % endcard_len) if endcard else "", total))
 
     audio_path = build_audio(cues, total, body if endcard else None,
@@ -354,7 +365,7 @@ def main(argv: list[str] | None = None) -> int:
     out = args.out or (config.OUT_DIR / f"video{suffix}.mp4")
 
     started = time.time()
-    render(shots, audio_path, out, args.fps, endcard)
+    render(scenes, audio_path, out, args.fps, endcard)
     print(f"\n書き出し完了: {out}")
     print("  %.1fs の動画を %.0fs で書き出しました" % (total, time.time() - started))
     return 0
