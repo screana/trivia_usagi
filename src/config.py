@@ -22,10 +22,16 @@ AUDIO_DIR = OUT_DIR / "audio"
 # 立ち絵は第三者の配布素材なので、リポジトリの外を参照する
 MASCOT = ROOT.parent / "VOICEBOX" / "素材" / "うさぎ" / "中国うさぎ立ち絵素材2_0000.png"
 BGM = ROOT / "assets" / "bgm.mp3"          # 無ければ BGM なしで書き出す
+ENDCARD = ROOT / "assets" / "endcard.mp4"
+# 背景に流す動画。順に使い、足りなければ先頭に戻る
+BACKGROUNDS = sorted((ROOT / "assets").glob("AdobeStock_*.mov"))
 
 # --------------------------------------------------------------------- 色
 
-BG = "#EFEFEF"
+BG = "#EFEFEF"                 # 背景動画を使わないときの下地
+# 背景動画の上に敷く白いベール。黒文字+白フチだけでは映像の上で読みにくい
+SCRIM_COLOR = (255, 255, 255)
+SCRIM_ALPHA = 0.62             # 0=そのまま 1=真っ白
 TEXT = "#111111"
 TEXT_STROKE = "#FFFFFF"
 CIRCLE_FILL = "#FFFFFF"        # イラストを載せる円の下地

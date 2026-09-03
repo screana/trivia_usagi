@@ -15,9 +15,10 @@ assets/images/*
 # BGM。配布元の規約がある。
 assets/bgm.mp3
 
-# エンドカード動画・背景動画。サイズが大きいので追跡しない。
+# エンドカード動画・背景動画。サイズが大きく、ストック素材はライセンス品。
 assets/endcard.mp4
-assets/background.*
+assets/*.mov
+assets/*.mp4
 
 # 生成物。台本から作り直せる。
 out/

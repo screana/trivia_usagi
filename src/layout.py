@@ -106,8 +106,63 @@ def _mascot() -> Image.Image | None:
     return image.resize((width, height), Image.LANCZOS)
 
 
-def base() -> Image.Image:
-    return Image.new("RGBA", (config.WIDTH, config.HEIGHT), config.BG)
+def background_path(index: int):
+    """項目番号(0始まり)に対して使う背景クリップ。本数が足りなければ先頭に戻る。"""
+    if not config.BACKGROUNDS:
+        return None
+    return config.BACKGROUNDS[index % len(config.BACKGROUNDS)]
+
+
+def background_frame(index: int, seconds: float = 2.0) -> Image.Image | None:
+    """背景クリップから1コマ取り出す。プレビューを実際の見え方に近づけるため。"""
+    import subprocess
+
+    import imageio_ffmpeg
+    import numpy as np
+
+    path = background_path(index)
+    if path is None:
+        return None
+    command = [
+        imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error",
+        "-ss", str(seconds), "-i", str(path),
+        "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
+    ]
+    raw = subprocess.run(command, capture_output=True).stdout
+    if not raw:
+        return None
+    # 素材は 1920x1080 固定。取り出したバイト数から高さを割り出す
+    width = 1920
+    height = len(raw) // (width * 3)
+    return Image.fromarray(np.frombuffer(raw[: width * height * 3], dtype=np.uint8)
+                           .reshape(height, width, 3))
+
+
+def fit_cover(image: Image.Image) -> Image.Image:
+    """画面いっぱいになるよう拡大して中央を切り出す。素材は16:9なので左右が落ちる。"""
+    ratio = max(config.WIDTH / image.width, config.HEIGHT / image.height)
+    scaled = image.resize((max(1, round(image.width * ratio)), max(1, round(image.height * ratio))),
+                          Image.LANCZOS)
+    left = (scaled.width - config.WIDTH) // 2
+    top = (scaled.height - config.HEIGHT) // 2
+    return scaled.crop((left, top, left + config.WIDTH, top + config.HEIGHT))
+
+
+def base(background: Image.Image | None = None) -> Image.Image:
+    """下地。背景動画のコマを渡すとその上に白いベールを敷く。
+
+    黒文字+白フチだけでは映像の上で読みにくいので、ベールで背景を抜く。
+    濃さは config.SCRIM_ALPHA。
+    """
+    if background is None:
+        return Image.new("RGBA", (config.WIDTH, config.HEIGHT), config.BG)
+
+    canvas = fit_cover(background.convert("RGBA"))
+    alpha = int(round(255 * config.SCRIM_ALPHA))
+    if alpha > 0:
+        scrim = Image.new("RGBA", (config.WIDTH, config.HEIGHT), config.SCRIM_COLOR + (alpha,))
+        canvas.alpha_composite(scrim)
+    return canvas
 
 
 def paste_mascot(canvas: Image.Image) -> None:
@@ -127,8 +182,8 @@ def _centered_bottom(canvas: Image.Image, block: Image.Image, bottom: int) -> No
     canvas.alpha_composite(block, ((canvas.width - block.width) // 2, bottom - block.height))
 
 
-def render_title(title: str) -> Image.Image:
-    canvas = base()
+def render_title(title: str, background: Image.Image | None = None) -> Image.Image:
+    canvas = base(background)
     paste_mascot(canvas)
     _centered(canvas, text_block(
         title, config.TITLE_SIZE, fill=config.TEXT, stroke=config.TEXT_STROKE,
@@ -139,12 +194,12 @@ def render_title(title: str) -> Image.Image:
 
 
 def render_item(setup: str, punch: str | None, illustration: Image.Image | None,
-                attribution: str | None) -> Image.Image:
+                attribution: str | None, background: Image.Image | None = None) -> Image.Image:
     """1項目の画面。punch が None なら振りだけの状態を描く。
 
     出典表記の有無で他の要素の位置は変えない(座標は固定)。
     """
-    canvas = base()
+    canvas = base(background)
     paste_mascot(canvas)
 
     _centered_bottom(canvas, text_block(

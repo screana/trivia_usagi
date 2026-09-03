@@ -49,12 +49,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--item", type=int, default=1, help="台本の何項目目か (1始まり)")
     parser.add_argument("--title", action="store_true", help="タイトルカードを描く")
     parser.add_argument("--no-punch", action="store_true", help="オチを出す前の状態を描く")
+    parser.add_argument("--no-bg", action="store_true", help="背景動画を敷かず単色で描く")
     args = parser.parse_args(argv)
 
     script = load_script()
 
+    background = None if args.no_bg else layout.background_frame(0 if args.title else args.item - 1)
+
     if args.title:
-        image = layout.render_title(script["title"])
+        image = layout.render_title(script["title"], background=background)
         label = "タイトルカード"
     else:
         items = script.get("items") or []
@@ -67,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
             punch=None if args.no_punch else item["punch"],
             illustration=illustration,
             attribution=attribution,
+            background=background,
         )
         label = f"{args.item}項目目: {item['setup']} / {item['punch']}"
 
