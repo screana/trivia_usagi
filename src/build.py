@@ -189,7 +189,7 @@ def build_audio(cues: list[Cue], total: float, endcard_at: float | None,
             track[start:end] += samples[: end - start]
 
     if config.BGM.exists():
-        track += _bgm(cues, length, total)
+        track += _bgm(cues, length, total, endcard_at)
 
     peak = float(np.abs(track).max())
     if peak > 1.0:
@@ -204,8 +204,13 @@ def build_audio(cues: list[Cue], total: float, endcard_at: float | None,
     return out_path
 
 
-def _bgm(cues: list[Cue], length: int, total: float) -> np.ndarray:
-    """BGM を尺に合わせ、読み上げ中だけ音量を下げる。"""
+def _bgm(cues: list[Cue], length: int, total: float,
+         endcard_at: float | None = None) -> np.ndarray:
+    """BGM を尺に合わせ、読み上げ中だけ音量を下げる。
+
+    エンドカードには自前の音が入っているので、その手前で BGM を切る。
+    重ねると両方の音楽がぶつかって濁る。
+    """
     samples = decode(config.BGM)
     if len(samples) == 0:
         return np.zeros(length, dtype=np.float32)
@@ -230,8 +235,23 @@ def _bgm(cues: list[Cue], length: int, total: float) -> np.ndarray:
         smoothed[i] = value
 
     positions = np.arange(length, dtype=np.float32) / SAMPLE_RATE / step
-    return samples * np.interp(positions, np.arange(blocks, dtype=np.float32),
-                               smoothed).astype(np.float32)
+    samples *= np.interp(positions, np.arange(blocks, dtype=np.float32),
+                         smoothed).astype(np.float32)
+
+    # 頭は静かに入れる
+    head = min(int(config.BGM_FADE_IN * SAMPLE_RATE), length)
+    if head > 0:
+        samples[:head] *= np.linspace(0.0, 1.0, head, dtype=np.float32)
+
+    # エンドカードの手前で終わらせる。無ければ末尾でフェードアウトする
+    stop = endcard_at if endcard_at is not None else total
+    fade = int(config.BGM_FADE_OUT * SAMPLE_RATE)
+    end = min(int(round(stop * SAMPLE_RATE)), length)
+    start = max(0, end - fade)
+    if end > start:
+        samples[start:end] *= np.linspace(1.0, 0.0, end - start, dtype=np.float32)
+    samples[end:] = 0.0
+    return samples
 
 
 # --------------------------------------------------------------------- 映像

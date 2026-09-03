@@ -6,7 +6,7 @@
     python -m src.thumbnail --expression 困り
     python -m src.thumbnail --no-mask       # 伏せ字を出さない
 
-最後の項目の**振りだけ**を出して、オチは伏せる。何が答えなのか気になる状態で
+**一番引きのある項目**の振りだけを出して、オチは伏せる。何が答えなのか気になる状態で
 止めるのが狙い。うさぎは動画より大きく置く。
 
 描画は layout.py の部品を使う。文字の折り返しやフチの出方を動画と揃えるため。
@@ -115,7 +115,7 @@ def render(item: dict, index: int, expression: str, mask: bool) -> Image.Image:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--item", type=int, help="使う項目 (1始まり)。既定は最後")
+    parser.add_argument("--item", type=int, help="使う項目 (1始まり)。既定は config.THUMB_ITEM")
     parser.add_argument("--expression", default=config.THUMB_EXPRESSION,
                         help="うさぎの表情")
     parser.add_argument("--no-mask", action="store_true", help="伏せ字を出さない")
@@ -125,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         script = load_script()
         items = script["items"]
-        index = (args.item - 1) if args.item else (len(items) + config.THUMB_ITEM)
+        index = (args.item - 1) if args.item else (config.THUMB_ITEM - 1)
         if not 0 <= index < len(items):
             raise ThumbnailError(f"--item は 1〜{len(items)} で指定してください")
 
