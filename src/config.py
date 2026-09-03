@@ -87,6 +87,24 @@ MASCOT_FLIP = True             # 左右反転。画面の内側(右)を向かせ
 TITLE_SIZE = 105
 TITLE_Y = 620
 
+# --------------------------------------------------------------------- サムネイル
+
+# 最後の項目の振りだけを出し、オチは伏せる。うさぎを大きめに置く
+THUMB_ITEM = -1                # 使う項目。-1 で最後
+THUMB_EXPRESSION = "驚き"       # うさぎの表情 (config.EXPRESSIONS の名前)
+THUMB_SETUP_BOTTOM = 470       # 振りのブロック下端
+THUMB_SETUP_SIZE = 110
+THUMB_CIRCLE_CENTER_Y = 760
+THUMB_CIRCLE_DIAMETER = 540
+THUMB_MASK_TEXT = "？"          # オチの代わりに出す文字。空にすると何も出さない
+THUMB_MASK_SIZE = 260
+THUMB_MASK_Y = 1060            # 伏せ字のブロック上端
+THUMB_MASK_COLOR = "#E0243C"
+THUMB_MASCOT_X = -30
+THUMB_MASCOT_BOTTOM = 1900
+THUMB_MASCOT_HEIGHT = 900      # 動画より大きく出す。サムネはうさぎが主役
+THUMB_SCRIM_ALPHA = 0.55       # 動画より少し薄くして写真を見せる
+
 # 表情の組み合わせ。src/tachie.py が PSD から書き出す。
 # 選べる名前は `python -m src.tachie --list` で見られる。
 # 衣装は既定(巫女服)のまま。顔まわりだけを切り替えている。

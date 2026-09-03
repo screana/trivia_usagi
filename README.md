@@ -53,6 +53,7 @@ python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
 | `/images` | 各項目に合うイラストを探して manifest.json を作る |
 | `/review [項目]` | プレビューを実際に見てレイアウトの事故を潰す |
 | `/voicecheck` | 読み上げの読みをカタカナで検証(音声を作る前に) |
+| `/thumbnail [項目] [表情]` | サムネイルを作る。振りだけ出してオチは伏せる |
 | `/publish` | 概要欄・タイトル案・ハッシュタグを作る |
 
 ## ファイル構成
@@ -71,6 +72,7 @@ src/
   preview.py          # 静止画1枚
   voice.py            # VOICEVOX。読みの検証もここ
   tachie.py           # 立ち絵PSDから表情差分を書き出す
+  thumbnail.py        # サムネイル
   build.py            # 動画の組み立て
   fetch.py            # いらすとやからイラストを取得
 ```
