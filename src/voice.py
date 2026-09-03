@@ -142,6 +142,8 @@ def clips(script: dict) -> list[tuple[str, str]]:
         # 表示用の改行は読み上げに含めない
         out.append((f"{i:02d}_setup", item["setup"].replace("\n", "")))
         out.append((f"{i:02d}_punch", item["punch"].replace("\n", "")))
+    if config.ENDCARD_VOICE:
+        out.append(("endcard", config.ENDCARD_VOICE))
     return out
 
 

@@ -188,6 +188,17 @@ def build_audio(cues: list[Cue], total: float, endcard_at: float | None,
         if end > start:
             track[start:end] += samples[: end - start]
 
+        # エンドカードの一言。読み終わりが終端に来るように置くので、
+        # ロゴと文字が出るタイミングに「更新中」が重なる
+        line = config.AUDIO_DIR / "endcard.wav"
+        if config.ENDCARD_VOICE and line.exists():
+            voice = decode(line)
+            at = total - len(voice) / SAMPLE_RATE - config.ENDCARD_VOICE_TAIL
+            start = max(int(round(at * SAMPLE_RATE)), int(round(endcard_at * SAMPLE_RATE)))
+            end = min(start + len(voice), length)
+            if end > start:
+                track[start:end] += voice[: end - start]
+
     if config.BGM.exists():
         track += _bgm(cues, length, total, endcard_at)
 
