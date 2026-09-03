@@ -99,6 +99,8 @@ def _mascot() -> Image.Image | None:
         return None
     image = Image.open(config.MASCOT).convert("RGBA")
     image = image.crop(image.getbbox())
+    if config.MASCOT_FLIP:
+        image = image.transpose(Image.FLIP_LEFT_RIGHT)
     height = config.MASCOT_HEIGHT
     width = max(1, int(image.width * height / image.height))
     return image.resize((width, height), Image.LANCZOS)
@@ -117,6 +119,12 @@ def paste_mascot(canvas: Image.Image) -> None:
 
 def _centered(canvas: Image.Image, block: Image.Image, top: int) -> None:
     canvas.alpha_composite(block, ((canvas.width - block.width) // 2, top))
+
+
+def _centered_bottom(canvas: Image.Image, block: Image.Image, bottom: int) -> None:
+    """下端を合わせて置く。行数が増えても下に伸びないので、
+    振りが2行になったときに円へ食い込むのを防げる。"""
+    canvas.alpha_composite(block, ((canvas.width - block.width) // 2, bottom - block.height))
 
 
 def render_title(title: str) -> Image.Image:
@@ -139,11 +147,11 @@ def render_item(setup: str, punch: str | None, illustration: Image.Image | None,
     canvas = base()
     paste_mascot(canvas)
 
-    _centered(canvas, text_block(
+    _centered_bottom(canvas, text_block(
         setup, config.FONT_SIZE, fill=config.TEXT, stroke=config.TEXT_STROKE,
         stroke_width=config.STROKE_WIDTH, max_width=config.TEXT_MAX_WIDTH,
         line_spacing=config.LINE_SPACING,
-    ), config.SETUP_Y)
+    ), config.SETUP_BOTTOM)
 
     if illustration is not None:
         circle = circular(illustration, config.CIRCLE_DIAMETER)

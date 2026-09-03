@@ -56,16 +56,18 @@ SAFE_SIDE = 120
 
 TEXT_MAX_WIDTH = WIDTH - SAFE_SIDE * 2 - 40
 
-SETUP_Y = 240                  # 振りテキストのブロック上端
-CIRCLE_CENTER_Y = 700          # イラストの円の中心
+SETUP_BOTTOM = 410             # 振りテキストのブロック"下端"。
+                               # 行数が増えても円に食い込まないよう下端で揃える
+CIRCLE_CENTER_Y = 770          # イラストの円の中心
 CIRCLE_DIAMETER = 560
-ATTRIBUTION_Y = 1000           # 出典表記のブロック上端(出す場合のみ)
+ATTRIBUTION_Y = 1060           # 出典表記のブロック上端(出す場合のみ)
 ATTRIBUTION_SIZE = 30
-PUNCH_Y = 1090                 # オチテキストのブロック上端
+PUNCH_Y = 1150                 # オチテキストのブロック上端
 
-MASCOT_X = 90                 # 立ち絵の左端
+MASCOT_X = 150                 # 立ち絵の左端
 MASCOT_BOTTOM = 1790           # 立ち絵の下端
 MASCOT_HEIGHT = 420
+MASCOT_FLIP = True             # 左右反転。画面の内側(右)を向かせる
 
 TITLE_SIZE = 105
 TITLE_Y = 620

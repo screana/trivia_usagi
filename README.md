@@ -3,7 +3,7 @@
 台本(テキストのみ)から、縦型1080x1920の雑学ショート動画を作る。
 開発方針は [DEVELOPMENT.md](DEVELOPMENT.md) にある。
 
-**いまできること: 静止画プレビューまで。** 音声合成と動画化はこれから。
+**いまできること: 静止画プレビューと音声生成まで。** 動画化はこれから。
 
 ## 使い方
 
@@ -14,6 +14,14 @@ python -m src.preview              # 1項目目を out/preview.png に
 python -m src.preview --item 3     # 3項目目
 python -m src.preview --title      # タイトルカード
 python -m src.preview --no-punch   # オチを出す前の状態
+```
+
+音声(VOICEVOX を起動しておくこと):
+
+```bash
+python -m src.voice --check   # 読みをカタカナで確認(音声は作らない)
+python -m src.voice           # out/audio/ に 01_setup.wav 等を生成
+python -m src.voice --force   # 変わっていなくても作り直す
 ```
 
 `out/preview.png` と、セーフエリアを重ねた `out/preview_guide.png` が出る。
@@ -52,8 +60,17 @@ src/
   config.py           # 座標・色・フォント・速度をすべてここに
   layout.py           # 描画。preview と build で共用
   preview.py          # 静止画1枚
+  voice.py            # VOICEVOX。読みの検証もここ
   fetch.py            # いらすとやからイラストを取得
 ```
+
+`assets/` に手で置くもの(いずれも git 管理外):
+
+| ファイル | 用途 |
+| --- | --- |
+| `endcard.mp4` | 末尾に付けるエンドカード動画 |
+| `bgm.mp3` | BGM |
+| `background.mp4` | 背景に流す動画(予定) |
 
 中国うさぎの立ち絵は**リポジトリの外**(`../VOICEBOX/素材/うさぎ/`)を参照している。
 再配布不可の素材をうっかりコミットしないため。パスは `config.MASCOT`。
@@ -95,7 +112,17 @@ VOICEVOX:中国うさぎ
 
 ## これから
 
-1. ~~`preview.py` — 静止画1枚でレイアウトを詰める~~ ← いまここ
-2. `voice.py` — VOICEVOX で音声生成
+1. ~~`preview.py` — 静止画1枚でレイアウトを詰める~~
+2. ~~`voice.py` — VOICEVOX で音声生成~~ ← いまここ
 3. `build.py` — 1項目だけ動画化してタイミングを詰める
-4. 通しで7項目 + タイトル + BGM
+4. 通しで7項目 + タイトル + BGM + エンドカード
+
+## 方針書からの変更
+
+DEVELOPMENT.md の確定事項からの差分。利用者の判断で変わったもの。
+
+- **締めなし → エンドカード動画あり。** `assets/endcard.mp4` (4.06秒)
+- **背景は単色 → 動画を流す予定。** `layout.py` は現状 `BG` で塗りつぶしているが、
+  背景動画を敷く場合は透過の重ね画像を作って動画に合成する形になる
+- **立ち絵は左右反転して右寄せ** (`MASCOT_FLIP`)。画面の内側を向かせるため
+- **振りは下端基準** (`SETUP_BOTTOM`)。上端基準だと2行になったとき円に食い込むため
