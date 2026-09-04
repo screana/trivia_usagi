@@ -1,0 +1,50 @@
+{
+  "episode": 2,
+  "created": "2026-09-04",
+  "published": null,
+  "url": null,
+  "items": [
+    {
+      "id": 16,
+      "hee": 100,
+      "category": "食べ物",
+      "title": "カニみそ・エビみそ"
+    },
+    {
+      "id": 4,
+      "hee": 74,
+      "category": "生物",
+      "title": "パンダの指は6本"
+    },
+    {
+      "id": 32,
+      "hee": 92,
+      "category": "芸術・文化",
+      "title": "一富士二鷹三茄子の続き"
+    },
+    {
+      "id": 23,
+      "hee": 87,
+      "category": "科学",
+      "title": "QRコードの隅"
+    },
+    {
+      "id": 183,
+      "hee": 80,
+      "category": "言語・言葉",
+      "title": "車のナンバーに使われないひらがながある"
+    },
+    {
+      "id": 5,
+      "hee": 79,
+      "category": "生活",
+      "title": "非常口の緑色の意味"
+    },
+    {
+      "id": 40,
+      "hee": 72,
+      "category": "エンタメ",
+      "title": "マリオの職業"
+    }
+  ]
+}
