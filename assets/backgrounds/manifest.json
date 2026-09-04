@@ -30,5 +30,93 @@
     "credit": null,
     "page": "https://stock.adobe.com/jp/569275040",
     "query": null
+  },
+  "pexels_35536554.mp4": {
+    "source": "Pexels",
+    "id": 35536554,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by peri ✨ on Pexels",
+    "page": "https://www.pexels.com/video/peaceful-cat-enjoying-gentle-head-rubs-35536554/",
+    "author_url": "https://www.pexels.com/@peri-2149976252",
+    "query": "cat",
+    "size": "1080x1920",
+    "duration": 24
+  },
+  "pexels_30337438.mp4": {
+    "source": "Pexels",
+    "id": 30337438,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by [A] [B] [S] on Pexels",
+    "page": "https://www.pexels.com/video/relaxed-british-shorthair-cat-on-sofa-30337438/",
+    "author_url": "https://www.pexels.com/@a-b-s-1302114817",
+    "query": "cat",
+    "size": "1080x1920",
+    "duration": 11
+  },
+  "pexels_8944053.mp4": {
+    "source": "Pexels",
+    "id": 8944053,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by Thirdman on Pexels",
+    "page": "https://www.pexels.com/video/person-brushing-a-cat-8944053/",
+    "author_url": "https://www.pexels.com/@thirdman",
+    "query": "cat",
+    "size": "1080x1920",
+    "duration": 16
+  },
+  "pexels_30588697.mp4": {
+    "source": "Pexels",
+    "id": 30588697,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by Rin Gakusho on Pexels",
+    "page": "https://www.pexels.com/video/cozy-cat-relaxing-in-soft-blanket-30588697/",
+    "author_url": "https://www.pexels.com/@rin-gakusho-280714394",
+    "query": "cat",
+    "size": "1080x1920",
+    "duration": 20
+  },
+  "pexels_5728444.mp4": {
+    "source": "Pexels",
+    "id": 5728444,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by Sam Lion on Pexels",
+    "page": "https://www.pexels.com/video/two-dogs-walking-out-5728444/",
+    "author_url": "https://www.pexels.com/@sam-lion",
+    "query": "dog",
+    "size": "1080x1920",
+    "duration": 10
+  },
+  "pexels_5994137.mp4": {
+    "source": "Pexels",
+    "id": 5994137,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by https://kaboompics.com/ on Pexels",
+    "page": "https://www.pexels.com/video/a-cute-dog-sleeping-5994137/",
+    "author_url": "https://www.pexels.com/@karola-g",
+    "query": "sleeping dog",
+    "size": "1080x2048",
+    "duration": 23
+  },
+  "pexels_20102192.mp4": {
+    "source": "Pexels",
+    "id": 20102192,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by Bofforss on Pexels",
+    "page": "https://www.pexels.com/video/a-white-dog-laying-on-a-bed-in-a-room-20102192/",
+    "author_url": "https://www.pexels.com/@bofforss-98489800",
+    "query": "sleeping dog",
+    "size": "1080x1920",
+    "duration": 12
+  },
+  "pexels_5279819.mp4": {
+    "source": "Pexels",
+    "id": 5279819,
+    "license": "Pexels License (商用可・表示義務なし)",
+    "credit": "Video by Peggy Anke on Pexels",
+    "page": "https://www.pexels.com/video/a-brown-dog-resting-while-leaning-on-a-wooden-post-5279819/",
+    "author_url": "https://www.pexels.com/@reisefreiheit",
+    "query": "sleeping dog",
+    "size": "1080x1920",
+    "duration": 16
   }
 }

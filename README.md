@@ -224,10 +224,19 @@ ID帯ごとの相対評価(各帯の中での順位で選ぶ)に切り替える�
 python -m src.backdrop --show                     # 持っている素材と出所
 python -m src.backdrop --list "cat"               # 縦の候補を探す
 python -m src.backdrop --get 12345 --query "cat"  # 取得する
+python -m src.backdrop --drop pexels_12345.mp4    # 捨てる(記録も一緒に)
 ```
 
 `PEXELS_API_KEY` が `.env` に要る。選び方は `.claude/commands/backdrop.md`。
-**背景は文字の下地なので、動きが遅く明るさが一定の映像を選ぶ。**
+`--list` は候補の見た目を `out/backdrop_candidates.png` に並べる(表だけでは選べない)。
+
+**背景は文字の下地なので、動きが遅く明るさが一定の映像を選ぶ。** 動きの速さは
+静止画では分からないので、取得後にフレーム間の差分を測って既存素材と比べる。
+実測では寝ている猫が 4.5〜5.0、既存の Adobe Stock が 6.7〜11.5、雪で遊ぶ犬が
+30.7 だった(最後のものは落とした)。
+
+**Pexels は User-Agent を名乗らないと 403 (Cloudflare error 1010) で弾く。**
+urllib の既定 `Python-urllib/3.x` が対象になっている。
 
 横長(1920x1080)の素材は中央を切り出して縦型にするので、左右がかなり落ちる。
 被写体が中央にある素材を選ぶこと。**縦の素材ならこの問題は起きない**ので、

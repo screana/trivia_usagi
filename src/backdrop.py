@@ -20,6 +20,7 @@ Pixabay は動画では orientation が効かない(画像のみ)。
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sys
 import urllib.error
@@ -33,6 +34,9 @@ ENDPOINT = "https://api.pexels.com/v1/videos/search"
 LICENSE = "Pexels License (商用可・表示義務なし)"
 # 上限を超えて叩かないための保険。候補は目で選ぶので多くても見きれない
 PER_PAGE = 15
+# User-Agent を名乗らないと Cloudflare に 403(error 1010)で弾かれる。
+# urllib の既定 "Python-urllib/3.x" が対象になっている
+UA = "Mozilla/5.0 (compatible; zatsugaku-pipeline/0.1)"
 
 
 class BackdropError(Exception):
@@ -48,6 +52,7 @@ class Clip:
     duration: int
     width: int
     height: int
+    preview: str
     files: list[dict]
 
     @property
@@ -71,7 +76,7 @@ def search(query: str, portrait: bool = True) -> list[Clip]:
     if portrait:
         params["orientation"] = "portrait"
     url = ENDPOINT + "?" + urllib.parse.urlencode(params)
-    request = urllib.request.Request(url, headers={"Authorization": _key()})
+    request = urllib.request.Request(url, headers={"Authorization": _key(), "User-Agent": UA})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             data = json.loads(response.read().decode("utf-8"))
@@ -92,6 +97,7 @@ def search(query: str, portrait: bool = True) -> list[Clip]:
             author=user.get("name", "") or "unknown", author_url=user.get("url", ""),
             duration=hit.get("duration", 0),
             width=hit.get("width", 0), height=hit.get("height", 0),
+            preview=hit.get("image", ""),
             files=[f for f in hit.get("video_files", [])
                    if f.get("file_type") == "video/mp4" and f.get("link")],
         ))
@@ -141,13 +147,29 @@ def save_manifest(manifest: dict) -> None:
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def drop(name: str) -> None:
+    """素材を捨てる。ファイルと manifest の記録を必ず一緒に消す。
+
+    片方だけ残すと、使っていない素材のクレジットが概要欄に載る(または
+    出所の分からない素材が残る)。
+    """
+    target = config.BACKGROUND_DIR / name
+    manifest = load_manifest()
+    if not target.exists() and name not in manifest:
+        raise BackdropError(f"{name} は見つかりません")
+    target.unlink(missing_ok=True)
+    manifest.pop(name, None)
+    save_manifest(manifest)
+
+
 def store(clip: Clip, query: str) -> str:
     file = pick_file(clip)
     filename = f"pexels_{clip.id}.mp4"
     target = config.BACKGROUND_DIR / filename
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    request = urllib.request.Request(file["link"], headers={"Authorization": _key()})
+    request = urllib.request.Request(file["link"],
+                                     headers={"Authorization": _key(), "User-Agent": UA})
     with urllib.request.urlopen(request, timeout=120) as response:
         target.write_bytes(response.read())
 
@@ -169,6 +191,40 @@ def store(clip: Clip, query: str) -> str:
 
 
 # --------------------------------------------------------------------- 表示
+
+
+def contact_sheet(clips: list[Clip], columns: int = 5, cell: int = 320):
+    """候補のプレビュー画像を1枚に並べる。
+
+    表に並んだ id と作者名だけでは何が写っているか分からず、選びようがない。
+    **静止画なので動きの速さは分からない**が、被写体と明るさはこれで判断できる。
+    """
+    from PIL import Image, ImageDraw
+
+    from . import layout
+
+    height = int(cell * config.HEIGHT / config.WIDTH)
+    rows = (len(clips) + columns - 1) // columns
+    sheet = Image.new("RGB", (columns * cell, rows * height), (255, 255, 255))
+    font = layout.load_font(30)
+
+    for i, clip in enumerate(clips):
+        box = (i % columns * cell, i // columns * height)
+        try:
+            request = urllib.request.Request(clip.preview, headers={"User-Agent": UA})
+            with urllib.request.urlopen(request, timeout=30) as response:
+                thumb = Image.open(io.BytesIO(response.read())).convert("RGB")
+        except Exception:
+            continue                      # 1枚取れなくても残りは並べる
+        sheet.paste(layout.fit_cover(thumb).resize((cell, height), Image.LANCZOS), box)
+        draw = ImageDraw.Draw(sheet)
+        draw.text((box[0] + 10, box[1] + 8), str(clip.id), font=font,
+                  fill="#FFFFFF", stroke_width=4, stroke_fill="#000000")
+
+    config.OUT_DIR.mkdir(parents=True, exist_ok=True)
+    path = config.OUT_DIR / "backdrop_candidates.png"
+    sheet.save(path)
+    return path
 
 
 def print_candidates(clips: list[Clip]) -> None:
@@ -209,11 +265,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--get", type=int, metavar="ID", help="取得する")
     parser.add_argument("--query", help="--get のときの検索語(--list と同じものを渡す)")
     parser.add_argument("--show", action="store_true", help="持っている素材と出所を見る")
+    parser.add_argument("--drop", metavar="FILE", help="素材を捨てる(記録も一緒に消す)")
     args = parser.parse_args(argv)
 
     try:
         if args.show:
             print_owned()
+            return 0
+
+        if args.drop:
+            drop(args.drop)
+            print(f"{args.drop} を捨てました(manifest の記録も消しました)")
             return 0
 
         if args.list:
@@ -223,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
                       + ("。--any で横の素材も探せます" if not args.any else ""))
                 return 0
             print_candidates(clips)
+            print(f"  一覧: {contact_sheet(clips)}")
             print(f'\npython -m src.backdrop --get <id> --query "{args.list}"')
             return 0
 
