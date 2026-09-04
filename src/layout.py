@@ -218,6 +218,45 @@ def base(background: Image.Image | None = None, *, overlay: bool = False) -> Ima
     return canvas
 
 
+@functools.lru_cache(maxsize=1)
+def _promo_icon() -> Image.Image | None:
+    """アプリのアイコン。角を丸めてアプリらしく見せる。"""
+    if not config.PROMO_ICON.exists():
+        return None
+    size = config.PROMO_ICON_SIZE
+    icon = Image.open(config.PROMO_ICON).convert("RGBA").resize((size, size), Image.LANCZOS)
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, size - 1, size - 1), radius=config.PROMO_ICON_RADIUS, fill=255
+    )
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    out.paste(icon, (0, 0), mask)
+    return out
+
+
+def paste_promo(canvas: Image.Image) -> None:
+    """立ち絵の右の空きにアイコンと一言を置く。
+
+    オチの下、立ち絵の横の帯は他に使い道がないので、ここに宣伝を入れる。
+    セーフエリアの内側に収めているので、アプリのUIには隠れない。
+    """
+    if not config.PROMO_SHOW:
+        return
+
+    icon = _promo_icon()
+    x = config.PROMO_X
+    if icon is not None:
+        canvas.alpha_composite(icon, (x, config.PROMO_CENTER_Y - icon.height // 2))
+        x += icon.width + config.PROMO_GAP
+
+    text = text_block(
+        config.PROMO_TEXT, config.PROMO_TEXT_SIZE, fill=config.TEXT,
+        stroke=config.TEXT_STROKE, stroke_width=config.STROKE_WIDTH - 1,
+        max_width=config.WIDTH - config.SAFE_SIDE - x, line_spacing=0,
+    )
+    canvas.alpha_composite(text, (x, config.PROMO_CENTER_Y - text.height // 2))
+
+
 def paste_mascot(canvas: Image.Image, expression: str | None = None) -> None:
     """中国うさぎをタイトルから最後まで左下に出す。"""
     mascot = _mascot(expression)
@@ -239,6 +278,7 @@ def render_title(title: str, background: Image.Image | None = None,
                  *, overlay: bool = False, expression: str | None = None) -> Image.Image:
     canvas = base(background, overlay=overlay)
     paste_mascot(canvas, expression)
+    paste_promo(canvas)
     _centered(canvas, text_block(
         title, config.TITLE_SIZE, fill=config.TEXT, stroke=config.TEXT_STROKE,
         stroke_width=config.STROKE_WIDTH + 2, max_width=config.TEXT_MAX_WIDTH,
@@ -256,6 +296,7 @@ def render_item(setup: str, punch: str | None, illustration: Image.Image | None,
     """
     canvas = base(background, overlay=overlay)
     paste_mascot(canvas, expression)
+    paste_promo(canvas)
 
     _centered_bottom(canvas, text_block(
         setup, config.FONT_SIZE, fill=config.TEXT, stroke=config.TEXT_STROKE,

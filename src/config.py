@@ -98,10 +98,21 @@ MASCOT_EXPRESSION_PUNCH = "驚き"
 TITLE_SIZE = 105
 TITLE_Y = 620
 
+# 立ち絵の右の空きに置くアプリの宣伝。安全域(x 370-960 / y 1370-1520)に収める
+PROMO_SHOW = True
+PROMO_ICON = ROOT / "assets" / "icon.png"
+PROMO_TEXT = "毎日雑学 で検索！"
+PROMO_X = 372                  # アイコンの左端
+PROMO_CENTER_Y = 1445          # アイコンと文字の中心
+PROMO_ICON_SIZE = 96
+PROMO_ICON_RADIUS = 22         # アプリアイコンらしく角を丸める
+PROMO_GAP = 22                 # アイコンと文字のあいだ
+PROMO_TEXT_SIZE = 46
+
 # --------------------------------------------------------------------- サムネイル
 
 # 最後の項目の振りだけを出し、オチは伏せる。うさぎを大きめに置く
-THUMB_ITEM = 2                 # 使う項目(1始まり)。一番引きのある雑学を選ぶ。
+THUMB_ITEM = 1                 # 使う項目(1始まり)。一番引きのある雑学を選ぶ。
                                # 機械的に決められないので、都度考えて書き換える
 THUMB_EXPRESSION = "驚き"       # うさぎの表情 (config.EXPRESSIONS の名前)
 THUMB_SETUP_BOTTOM = 470       # 振りのブロック下端

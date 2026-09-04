@@ -162,6 +162,12 @@ ID帯ごとの相対評価(各帯の中での順位で選ぶ)に切り替える�
 **振りは下端基準**(`SETUP_BOTTOM`)。上端基準だと2行になったとき下に伸びて
 中央の円に食い込む。下端で揃えれば行数が変わっても円との間隔は一定になる。
 
+**立ち絵の右の空きにアプリの宣伝を置いている**(`PROMO_*`)。角を丸めたアイコンと
+「毎日雑学 で検索！」。オチの下・立ち絵の横は他に使い道がないので使う。
+セーフエリアの内側に収めてあり、余白は右67px・下27px・立ち絵から32px・
+オチから37px。文言を長くすると右にはみ出すので、変えたら `--item` を何個か
+書き出して確認する。
+
 ### 背景動画
 
 素材は 1920x1080 の横長なので、中央を切り出して縦型にしている。左右がかなり
@@ -250,6 +256,7 @@ BGM は読み上げ中だけ `BGM_DUCK` まで下げ、**エンドカードの�
 | イラストの円 | `CIRCLE_CENTER_Y` / `CIRCLE_DIAMETER` |
 | うさぎの位置・大きさ | `MASCOT_X` / `MASCOT_BOTTOM` / `MASCOT_HEIGHT` |
 | うさぎの表情 | `MASCOT_EXPRESSION`(振り) / `MASCOT_EXPRESSION_PUNCH`(オチ) |
+| アプリの宣伝 | `PROMO_TEXT` / `PROMO_X` / `PROMO_CENTER_Y` / `PROMO_SHOW` |
 | 間の取り方 | `REVEAL_GAP`(振り→オチ) / `ITEM_GAP`(項目間) |
 | 背景の見え方 | `SCRIM_ALPHA` / `BG_SHUFFLE_SEED` |
 | BGM | `BGM_VOLUME` / `BGM_DUCK` / `BGM_FADE_OUT` |
