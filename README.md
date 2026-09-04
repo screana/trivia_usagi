@@ -79,11 +79,12 @@ src/
   preview.py          # 静止画1枚
   voice.py            # VOICEVOX。読みの検証もここ
   trivia.py           # DBから雑学の候補を取る(読み取り専用)
-AGENTS.md             # エージェント向けの作業指示(新しいセッションが最初に読む)
   tachie.py           # 立ち絵PSDから表情差分を書き出す
   thumbnail.py        # サムネイル
   build.py            # 動画の組み立て
   fetch.py            # いらすとやからイラストを取得
+AGENTS.md             # エージェント向けの作業指示。新しいセッションが最初に読む
+DEVELOPMENT.md        # 開発方針
 ```
 
 `assets/` に手で置くもの(いずれも git 管理外):
