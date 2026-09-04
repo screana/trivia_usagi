@@ -328,6 +328,60 @@ def render_item(setup: str, punch: str | None, illustration: Image.Image | None,
     return canvas
 
 
+def with_youtube_ui(image: Image.Image) -> Image.Image:
+    """Shorts のUIを模した目隠しを重ねる。何が隠れるかを見るためのもの。
+
+    本物のUI画像は Google の著作物なので使わず、位置と大きさだけを写した
+    自前のモックを描いている。アイコンの形は似せていない(目的は遮蔽の確認)。
+    寸法はセーフエリアの根拠に使った各プラットフォームのガイドに合わせてある。
+    """
+    out = image.convert("RGBA")
+    w, h = out.size
+    # 半透明を重ねるので、別レイヤに描いてから合成する。
+    # ImageDraw.Draw(im, "RGBA") は合成ではなく上書きになり、帯が真っ黒になる
+    layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    ink = (255, 255, 255, 235)
+    shade = (0, 0, 0, 90)
+
+    # 上下の暗がり(実際のUIも文字を読ませるため陰を敷いている)
+    draw.rectangle((0, 0, w, 190), fill=(0, 0, 0, 60))
+    draw.rectangle((0, h - 430, w, h), fill=shade)
+
+    # 右の操作ボタン列。いいね/よくないね/コメント/共有/リミックス/音源
+    cx = w - 66
+    for i, cy in enumerate(range(h - 900, h - 240, 132)):
+        if i == 5:                                  # 音源だけ角丸の四角
+            draw.rounded_rectangle((cx - 38, cy - 38, cx + 38, cy + 38), radius=10,
+                                   outline=ink, width=5)
+        else:
+            draw.ellipse((cx - 34, cy - 34, cx + 34, cy + 34), outline=ink, width=5)
+        if i < 4:                                   # 数字が入る位置
+            draw.rounded_rectangle((cx - 28, cy + 44, cx + 28, cy + 60), radius=8, fill=ink)
+
+    # 左下のチャンネル情報と説明文
+    draw.ellipse((40, h - 386, 116, h - 310), outline=ink, width=5)      # アイコン
+    draw.rounded_rectangle((130, h - 366, 420, h - 334), radius=14, fill=ink)  # @名前
+    draw.rounded_rectangle((436, h - 372, 596, h - 328), radius=22,
+                           outline=ink, width=5)                        # 登録ボタン
+    for i, y in enumerate((h - 288, h - 240)):                          # 説明文2行
+        draw.rounded_rectangle((40, y, 40 + (760 if i == 0 else 520), y + 30),
+                               radius=12, fill=(255, 255, 255, 200))
+
+    # 再生バー
+    draw.rounded_rectangle((40, h - 176, w - 40, h - 166), radius=5, fill=(255, 255, 255, 110))
+    draw.rounded_rectangle((40, h - 176, 470, h - 166), radius=5, fill=ink)
+
+    # モックであることを明示する
+    font = load_font(26)
+    draw.text((40, 44), "※ Shorts のUIを模した確認用の重ね絵(本物ではありません)",
+              font=font, fill=(255, 255, 255, 220),
+              stroke_width=3, stroke_fill=(0, 0, 0, 180))
+
+    out.alpha_composite(layer)
+    return out
+
+
 def with_safe_area(image: Image.Image) -> Image.Image:
     """セーフエリアのガイド線を重ねた版。/review でのはみ出し確認用。"""
     out = image.copy()

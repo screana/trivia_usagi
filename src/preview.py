@@ -50,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--title", action="store_true", help="タイトルカードを描く")
     parser.add_argument("--no-punch", action="store_true", help="オチを出す前の状態を描く")
     parser.add_argument("--no-bg", action="store_true", help="背景動画を敷かず単色で描く")
+    parser.add_argument("--ui", action="store_true",
+                        help="ShortsのUIを模した重ね絵も出す(何が隠れるかの確認)")
     args = parser.parse_args(argv)
 
     script = load_script()
@@ -80,10 +82,14 @@ def main(argv: list[str] | None = None) -> int:
     config.OUT_DIR.mkdir(parents=True, exist_ok=True)
     image.convert("RGB").save(config.OUT_DIR / "preview.png")
     layout.with_safe_area(image).convert("RGB").save(config.OUT_DIR / "preview_guide.png")
+    if args.ui:
+        layout.with_youtube_ui(image).convert("RGB").save(config.OUT_DIR / "preview_ui.png")
 
     print(f"{label}")
     print(f"  {config.OUT_DIR / 'preview.png'}")
     print(f"  {config.OUT_DIR / 'preview_guide.png'} (セーフエリア重ね)")
+    if args.ui:
+        print(f"  {config.OUT_DIR / 'preview_ui.png'} (ShortsのUI重ね)")
     return 0
 
 

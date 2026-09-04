@@ -14,6 +14,7 @@ python -m src.preview              # 1項目目を out/preview.png に
 python -m src.preview --item 3     # 3項目目
 python -m src.preview --title      # タイトルカード
 python -m src.preview --no-punch   # オチを出す前の状態
+python -m src.preview --ui        # ShortsのUIを重ねた版も出す
 ```
 
 音声(VOICEVOX を起動しておくこと):
@@ -70,6 +71,7 @@ out/                  # すべて git 管理外
   thumbnail.png       # 成果物
   preview.png         # 確認用。毎回上書きされる
   preview_guide.png   # セーフエリアを重ねた版
+  preview_ui.png      # ShortsのUIを模した重ね絵(--ui のとき)
   thumbnail_guide.png
   audio/              # 読み上げ。台本から再生成できる
   cache/              # 作り直せる中間物(背景の縦型変換、合成済み音声)
@@ -181,6 +183,23 @@ ID帯ごとの相対評価(各帯の中での順位で選ぶ)に切り替える�
 頭出しに戻り、止まったり動いたりして見える(`Scene` 単位で同じクリップの続きを
 切り出している)。割り当てはシャッフルし(`BG_SHUFFLE_SEED`)、隣り合う項目が
 同じ映像にならないようにしている。
+
+### 実際の見え方を確かめる
+
+```bash
+python -m src.preview --item 1 --ui
+```
+
+`out/preview_ui.png` に、Shorts のUIを模した重ね絵が出る。何が隠れるかを
+セーフエリアの枠より具体的に確認できる。
+
+**本物のUI画像は使っていない。** Google の著作物なので、位置と大きさだけを
+写した自前のモックを描いている(`layout.with_youtube_ui`)。アイコンの形は
+似せていない。目的は遮蔽の確認なので、それで足りる。
+
+**引っかかったところ:** `ImageDraw.Draw(im, "RGBA")` は半透明を**合成せず上書き**
+する。帯が真っ黒になって「全部隠れる」ように見えてしまった。別レイヤに描いて
+`alpha_composite` する必要がある。
 
 ## 立ち絵の表情差分
 
