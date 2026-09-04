@@ -31,5 +31,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# DB の接続文字列。絶対にコミットしない
 .env
 Thumbs.db

@@ -3,3 +3,5 @@ Pillow>=10.0
 numpy>=1.24
 budoux>=0.9
 psd-tools>=1.19
+psycopg[binary]>=3.3
+python-dotenv>=1.1

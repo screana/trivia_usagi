@@ -419,7 +419,7 @@ def main(argv: list[str] | None = None) -> int:
                                   if endcard else "なし"))
 
     audio_path = build_audio(cues, total, body if endcard else None,
-                             config.OUT_DIR / "audio" / "_mix.wav")
+                             config.MIX_WAV)
     suffix = f"_item{args.item}" if args.item else ""
     out = args.out or (config.OUT_DIR / f"video{suffix}.mp4")
 

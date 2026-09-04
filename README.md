@@ -49,7 +49,7 @@ python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
 
 | コマンド | 役割 |
 | --- | --- |
-| `/script <ジャンル>` | 台本生成。候補を20個出して1件ずつ裏取りしてから7個に絞る |
+| `/script [件数]` | DBから雑学を選んで台本を作る。振り/オチへの組み立ても |
 | `/images` | 各項目に合うイラストを探して manifest.json を作る |
 | `/review [項目]` | プレビューを実際に見てレイアウトの事故を潰す |
 | `/voicecheck` | 読み上げの読みをカタカナで検証(音声を作る前に) |
@@ -60,17 +60,25 @@ python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
 
 ```
 script.json           # 台本のみ。画像・話者・速度は書かない
+used_trivia.json      # 使用済みの雑学ID。DBは読み取り専用なのでこちらに記録
+.env                  # DBの接続文字列(git管理外)
 assets/
   images/
     manifest.json     # /images が生成。これだけ git 管理
-out/
-  preview.png
+out/                  # すべて git 管理外
+  video.mp4           # 成果物
+  thumbnail.png       # 成果物
+  preview.png         # 確認用。毎回上書きされる
   preview_guide.png   # セーフエリアを重ねた版
+  thumbnail_guide.png
+  audio/              # 読み上げ。台本から再生成できる
+  cache/              # 作り直せる中間物(背景の縦型変換、合成済み音声)
 src/
   config.py           # 座標・色・フォント・速度をすべてここに
   layout.py           # 描画。preview と build で共用
   preview.py          # 静止画1枚
   voice.py            # VOICEVOX。読みの検証もここ
+  trivia.py           # DBから雑学の候補を取る(読み取り専用)
   tachie.py           # 立ち絵PSDから表情差分を書き出す
   thumbnail.py        # サムネイル
   build.py            # 動画の組み立て
@@ -87,6 +95,54 @@ src/
 
 中国うさぎの立ち絵と PSD は**リポジトリの外**(`../VOICEBOX/素材/うさぎ/`)を参照している。
 第三者の配布素材をうっかりコミットしないため。パスは `config.TACHIE_DIR`。
+
+## 雑学の選定
+
+台本の素材はアプリのデータベース(Neon / Postgres)から持ってくる。
+**元データは裏取り済み**なので、web検索での事実確認はしない。
+
+```bash
+python -m src.trivia --list 20 --full   # 未使用の上位を見る
+python -m src.trivia --show 112 16      # 指定IDの全文
+python -m src.trivia --mark 112 16 …    # 使用済みに記録
+python -m src.trivia --used             # 使用済みの一覧
+```
+
+`hee_count` はアプリ内で「へぇ」ボタンが押された**強さの合計**(1人あたり1〜10)。
+実際の反応が数字で残っているので、面白さの推測より当てになる。
+
+### 接続
+
+`.env` に読み取り専用の接続文字列を1行だけ置く(**git管理外**)。
+
+```
+TRIVIA_DATABASE_URL=postgresql://video_ro:…@ep-….neon.tech/neondb?sslmode=require
+```
+
+`src/trivia.py` は **SELECT しか実行しない**。使用済みの記録は DB ではなく
+`used_trivia.json` に残す。
+
+### Neon 側の設定でつまずいた点
+
+- **コンソールから作ったロールは `neon_superuser` を継承する。** 読み取り専用に
+  したいなら SQL で `CREATE ROLE` する必要がある
+- **`ALTER DEFAULT PRIVILEGES` は実行者が作るテーブルにしか効かない。**
+  アプリのテーブルは別のオーナーが作っているので `FOR ROLE <オーナー>` が要る
+- **`trivia` は RLS が有効。** SELECT を許すポリシーが `app_user` 限定だったため、
+  権限を付けても0件に見えた。`ALTER POLICY trivia_select_all ON public.trivia
+  TO app_user, video_ro;` で解決
+
+### 採用の順番
+
+**`hee_count` の高い順**。ただし古い雑学ほど票が積み上がっていて、
+id と hee_count の相関は **-0.65**(ID帯ごとの平均は 60.7 → 20.5 と3倍の開き)。
+単純な降順だと古いものから消費される。
+
+いまは在庫が306件あるので当面それでよい。**新しいものばかり残るようになったら**、
+ID帯ごとの相対評価(各帯の中での順位で選ぶ)に切り替える。
+
+`trivia_hees` は RLS で見えないため、投票人数で割った「1人あたりの強さ」は
+出せない。必要になったら集計ビューを作って `video_ro` に開ける。
 
 ## 画面の作り
 
