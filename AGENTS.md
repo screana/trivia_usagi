@@ -1,6 +1,28 @@
 # AGENTS.md
 
-雑学ショート動画の生成パイプライン。**まず [README.md](README.md) を読むこと。**
+雑学ショート動画の生成パイプライン。
+
+## 動画を1本作るように頼まれたとき
+
+**[.claude/commands/make.md](.claude/commands/make.md) を読んで、その手順どおりに
+進めること。** 最初から最後までの流れと、外してはいけない点が全部そこにある。
+(Claude Code なら `/make` と打つのと同じ)
+
+工程ごとの詳しいやり方は `.claude/commands/` の中の各ファイルにある。
+**その工程に入る前に、毎回その手順書を読むこと。**
+
+| 頼まれたこと | 読むもの |
+| --- | --- |
+| 1本作る | `.claude/commands/make.md` |
+| 台本 | `.claude/commands/script.md` |
+| イラスト | `.claude/commands/images.md` |
+| レイアウトの確認 | `.claude/commands/review.md` |
+| 読み方の確認 | `.claude/commands/voicecheck.md` |
+| サムネイル | `.claude/commands/thumbnail.md` |
+| 概要欄 | `.claude/commands/publish.md` |
+| 背景素材を足す | `.claude/commands/backdrop.md` |
+
+## そのほかの資料
 
 | 読むもの | 中身 |
 | --- | --- |
