@@ -1,7 +1,14 @@
 # AGENTS.md
 
-雑学ショート動画の生成パイプライン。使い方と設計は [README.md](README.md)、
-開発方針は [DEVELOPMENT.md](DEVELOPMENT.md) にある。**まず README を読むこと。**
+雑学ショート動画の生成パイプライン。**まず [README.md](README.md) を読むこと。**
+
+| 読むもの | 中身 |
+| --- | --- |
+| [README.md](README.md) | 導入と、1本作る手順。動かす人向け |
+| [DESIGN.md](DESIGN.md) | 画面の作りと、なぜその設計にしたか。調べた結果と落とし穴 |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | 当初の開発方針(原典) |
+
+判断に迷ったら DESIGN.md を見る。**同じ落とし穴を二度踏まないために書いてある。**
 
 ## 絶対に守ること
 

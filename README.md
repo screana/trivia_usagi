@@ -1,415 +1,230 @@
 # 雑学ショート動画 生成パイプライン
 
-台本(テキストのみ)から、縦型1080x1920の雑学ショート動画を作る。
-開発方針は [DEVELOPMENT.md](DEVELOPMENT.md) にある。
+台本のテキストを書けば、縦型1080x1920の雑学ショート動画が1本出てくる。
+ナレーションは VOICEVOX の中国うさぎ、素材集めから概要欄まで一通り含む。
 
-**通しで動画が出るところまで完成。** タイトル + 雑学7項目 + エンドカード、BGM付き。
+このファイルは**動かす人**向け。なぜこうなっているかは [DESIGN.md](DESIGN.md)、
+Claude Code に作業させるときの決まりごとは [AGENTS.md](AGENTS.md) にある。
 
-## 回(エピソード)
+## できあがるもの
 
-**1本の動画 = 1つの回。** 台本・記録・イラスト・音声・成果物は
-`episodes/001/` の下にまとまっている。
+44秒前後の動画が1本。中身はこの順で並ぶ。
+
+```
+タイトルカード 2秒 → 雑学7項目 → エンドカード
+```
+
+1項目は約5秒。**振りとイラストを同時に出し、少し溜めてからオチを出す。**
+オチと同時にうさぎの表情が変わる。背景には動物の映像が流れ、その上に白い
+ベールを敷いて文字を読ませている。左下にうさぎ、その右にアプリの宣伝。
+
+動画のほかに**サムネイル**と**概要欄のテキスト**も出る。
+
+## 必要なもの
+
+### 自分で用意するもの
+
+| もの | 入手先 | 置き場所 |
+| --- | --- | --- |
+| **VOICEVOX** | [voicevox.hiroshiba.jp](https://voicevox.hiroshiba.jp/) | インストールして**起動しておく** |
+| **中国うさぎの立ち絵素材** | 配布元(PSD入りの配布物) | `../VOICEBOX/素材/うさぎ/` ※後述 |
+| **BGM** | 各自 | `assets/` に mp3 を1つ |
+| **エンドカード動画** | 各自 | `assets/endcard.mp4` |
+| **DBの接続文字列** | チャンネルの管理者から | `.env` |
+| **Pexels APIキー** | [pexels.com/api](https://www.pexels.com/api/) | `.env` |
+
+### すでに入っているもの
+
+- `assets/icon.png` — 画面に出すアプリのアイコン
+- `assets/backgrounds/manifest.json` — 背景素材の出所の記録(**素材本体は入っていない**)
+- `episodes/001/` — 1本目の台本と記録。作り方の見本になる
+
+### 自動で取れるもの
+
+- **イラスト** — `/images` がいらすとやから取る
+- **背景動画** — `/backdrop` が Pexels から取る
+
+### 環境
+
+- **Windows。** フォントのパスが `C:/Windows/Fonts/` 決め打ち
+- **Python 3.12**(3.11 でも動く)
+- フォント **BIZ UDPGothic Bold** は Windows 10 (2018年10月更新) 以降なら標準で入っている。
+  無い場合は游ゴシック→メイリオに落ちるが、見た目は変わる
+- **中国うさぎは VOICEVOX に最初から入っている。** 追加ダウンロードは要らない
+
+## 導入(最初の1回だけ)
+
+### 1. 取ってきて、依存を入れる
 
 ```bash
-python -m src.episode                    # 回の一覧と、そろっていないものを見る
+git clone <このリポジトリ> zatsugaku-pipeline
+cd zatsugaku-pipeline
+pip install -r requirements.txt
+```
+
+### 2. 立ち絵を置く
+
+**リポジトリの1つ上**の階層に置く。再配布できない素材なので、リポジトリの中に
+入れないための配置になっている。
+
+```
+親フォルダ/
+├── VOICEBOX/素材/うさぎ/          ← ここに配布物を展開する
+│   ├── psd/中国うさぎ立ち絵素材2.0.psd
+│   └── 中国うさぎ立ち絵素材2_0000.png
+└── zatsugaku-pipeline/            ← このリポジトリ
+```
+
+場所を変えたいときは `src/config.py` の `TACHIE_DIR` を書き換える。
+
+### 3. 素材を置く
+
+```
+assets/
+├── <好きな曲名>.mp3    ← BGM。曲名がそのままクレジットに使われる
+└── endcard.mp4         ← エンドカード。尺は自由(実ファイルから読む)
+```
+
+### 4. `.env` を作る
+
+リポジトリの直下に置く。**git には絶対に入らない**(`.gitignore` 済み)。
+
+```
+TRIVIA_DATABASE_URL=postgresql://…
+PEXELS_API_KEY=…
+```
+
+### 5. 背景動画を集める
+
+```bash
+python -m src.backdrop --list "cat"
+python -m src.backdrop --get <id> --query "cat"
+```
+
+`--list` は候補の見た目を `out/backdrop_candidates.png` に並べる。それを見て選ぶ。
+**落ち着いた映像を選ぶこと。** 選び方は `.claude/commands/backdrop.md` に書いてある。
+
+### 6. 動くか確かめる
+
+```bash
+python -m src.episode              # 001 が出れば台本は読めている
+python -m src.preview --ep 1       # out/preview.png が1秒で出る
+python -m src.voice --check --ep 1 # 読みがカタカナで並ぶ(VOICEVOX が要る)
+python -m src.backdrop --show      # 背景素材と出所が並ぶ
+```
+
+ここまで通れば準備完了。
+
+## 1本作る
+
+**Claude Code をリポジトリのルートで起動する。** スラッシュコマンドは起動した
+ディレクトリの `.claude/commands/` から読まれるので、別の場所で起動すると
+`Unknown command: /script` になる。
+
+| | やること | 所要 |
+| --- | --- | --- |
+| 1 | `/script` — 回を作り、DBから雑学を選んで振り/オチに組む | 数分 |
+| 2 | `/images` — 各項目のイラストを集める | 数分 |
+| 3 | `/review` — プレビューを見てレイアウトの事故を潰す | 数分 |
+| 4 | `/voicecheck` — 読み方を音声の前に確認する | 1分 |
+| 5 | `python -m src.voice` — 読み上げを作る | 30秒 |
+| 6 | `python -m src.build` — 動画を書き出す | **約4.5分** |
+| 7 | `/thumbnail` — サムネイルを作る | 1分 |
+| 8 | `/publish` — タイトル案・概要欄・クレジットを作る | 1分 |
+
+できあがりは全部 `episodes/NNN/` の中に入る。あとは YouTube に上げるだけ。
+
+### 回(エピソード)
+
+**1本の動画 = 1つの回。** どのコマンドも**既定は番号が一番大きい回**を見る。
+過去回を触るときだけ `--ep 1` を付ける。
+
+```bash
+python -m src.episode                    # 一覧。足りないものが分かる
 python -m src.episode --new "タイトル"   # 次の番号で回を作る
 ```
 
-どのコマンドも**既定は番号が一番大きい回**。過去回を触るときだけ `--ep 1` を付ける。
-
 ```
-episodes/
-  001/
-    script.json      台本のみ                    [git 管理]
-    record.json      使った雑学のIDと hee、公開情報 [git 管理]
-    publish.md       概要欄                      [git 管理]
-    images/          イラスト + manifest.json     [manifest だけ git 管理]
-    audio/           読み上げ wav + ledger + mix  [管理外]
-    video.mp4        成果物                      [管理外]
-    thumbnail.png    成果物                      [管理外]
+episodes/001/
+├── script.json     台本(振りとオチだけ)          [git 管理]
+├── record.json     使った雑学のIDと hee、公開情報  [git 管理]
+├── publish.md      概要欄                       [git 管理]
+├── images/         イラスト + manifest.json      [manifest だけ git 管理]
+├── audio/          読み上げ wav
+├── video.mp4       ← これを投稿する
+└── thumbnail.png   ← これを投稿する
 ```
 
-**なぜ回ごとに分けるか。** 以前は台本も動画も固定の名前だったので、2本目を作ると
-1本目が黙って消えた。回の中で閉じていれば過去回をそのまま見に行けるし、
-あとから作り直せる。
+一覧に「記録 0/7」と出たら、`/script` の最後の記録を忘れている。
+そのままだと**次回また同じ雑学が候補に出る。**
 
-**なぜ記録を台本の隣に置くか。** 使用済みの雑学を別ファイル(`used_trivia.json`)で
-持っていたときは、記録し忘れると静かにズレて、次回また同じ雑学が候補に出た。
-同じディレクトリに置けば、`python -m src.episode` の一覧に「記録 0/7」と出る。
+### 台本を手で書くとき
 
-**`record.json` に hee を写し取っているのは**、`hee_count` が時間とともに増えて
-いくため。採用した時点の値が残っていないと、あとから「なぜこれを選んだのか」を
-たどれない。
+DBを使わずに作ることもできる。`episodes/NNN/script.json` はこれだけ。
 
-## 使い方
-
-```bash
-pip install -r requirements.txt
-
-python -m src.preview              # 1項目目を out/preview.png に
-python -m src.preview --item 3     # 3項目目
-python -m src.preview --title      # タイトルカード
-python -m src.preview --no-punch   # オチを出す前の状態
-python -m src.preview --ui        # ShortsのUIを重ねた版も出す
-python -m src.preview --ep 1      # 過去回で描く
+```json
+{
+  "title": "意外と知らない雑学7選",
+  "items": [
+    { "setup": "ネギトロの由来には", "punch": "ネギもトロも関係ない" }
+  ]
+}
 ```
 
-音声(VOICEVOX を起動しておくこと):
+**振りは主語だけにしてオチを言ってしまわない。オチは短く言い切る。**
+画面からはみ出すときは、レイアウトではなく文言を短くする。
 
-```bash
-python -m src.voice --check   # 読みをカタカナで確認(音声は作らない)
-python -m src.voice           # 回の audio/ に 01_setup.wav 等を生成
-python -m src.voice --force   # 変わっていなくても作り直す
-```
+## 困ったとき
 
-動画:
+**`Unknown command: /script`**
+Claude Code をリポジトリのルートで起動していない。`cd` してから起動し直す。
 
-```bash
-python -m src.build --item 3     # 3項目目だけ
-python -m src.build --item 2-4   # 範囲。項目間の間を見るとき用(16秒で約2分)
-python -m src.build              # 通し (44秒で約4.5分)
-python -m src.build --no-endcard
-```
+**`VOICEVOX ENGINE に接続できません`**
+VOICEVOX を起動する。起動していれば `http://127.0.0.1:50021` が開く。
 
-通しは回の `video.mp4` に出る。`--item` を付けた抜粋は確認用なので
-`out/video_item3.mp4` に出て、回のディレクトリを汚さない。
+**`立ち絵がありません` / うさぎが出ない**
+`../VOICEBOX/素材/うさぎ/` の配置を確認する(導入の2)。
+表情のPNGが無ければ PSD から自動で作られるので、PSD があれば足りる。
 
-`out/preview.png` と、セーフエリアを重ねた `out/preview_guide.png` が出る。
-1秒ほどで終わるので、レイアウトはこれを見ながら詰める。
+**書き出しが妙に遅い**
+初回は背景動画の縦型変換が走る。`out/cache/bg/` に貯まるので2回目からは効かない。
 
-イラストの収集:
+**読み方がおかしい**
+`python -m src.voice --check` で読みを見て、**台本側の表記を変える**のが第一手。
+「15センチ」→「十五センチ」など。それで直らなければ VOICEVOX のユーザー辞書へ。
 
-```bash
-python -m src.fetch --list "タコ"                        # 候補を見る
-python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
-```
+**雑学が0件になる**
+DBの権限(RLS)を疑う。詳しくは [DESIGN.md](DESIGN.md) の「雑学の選定」。
 
-## スラッシュコマンド
+**動画を作り直したら背景が変わった**
+背景素材は全回で共通で、増減すると割り当てが変わる。**概要欄のクレジットも
+ずれる**ので、素材を足したあとに再書き出ししたら `/publish` をやり直す。
 
-`.claude/commands/` に定義してある。
+## 守ること
 
-| コマンド | 役割 |
-| --- | --- |
-| `/script [件数]` | 回を作り、DBから雑学を選んで台本を組む |
-| `/images` | 各項目に合うイラストを探して manifest.json を作る |
-| `/review [項目]` | プレビューを実際に見てレイアウトの事故を潰す |
-| `/voicecheck` | 読み上げの読みをカタカナで検証(音声を作る前に) |
-| `/thumbnail [項目] [表情]` | サムネイルを作る。振りだけ出してオチは伏せる |
-| `/backdrop [検索語]` | 背景に流す動画を Pexels から探して足す |
-| `/publish` | 概要欄・タイトル案・ハッシュタグを作る |
-
-## ファイル構成
-
-```
-episodes/             # 回ごとの一式(上の「回」を参照)
-.env                  # DBの接続文字列(git管理外)
-out/                  # 回に属さないもの。すべて git 管理外
-  preview.png         # 確認用。毎回上書きされる
-  preview_guide.png   # セーフエリアを重ねた版
-  preview_ui.png      # ShortsのUIを模した重ね絵(--ui のとき)
-  thumbnail_guide.png
-  video_item3.mp4     # --item で出した抜粋
-  cache/bg/           # 背景の縦型変換。素材は回によらず同じなので使い回す
-src/
-  config.py           # 座標・色・フォント・速度をすべてここに
-  episode.py          # 回の解決とパス、記録の読み書き
-  layout.py           # 描画。preview と build で共用
-  preview.py          # 静止画1枚
-  voice.py            # VOICEVOX。読みの検証もここ
-  trivia.py           # DBから雑学の候補を取る(読み取り専用)
-  tachie.py           # 立ち絵PSDから表情差分を書き出す
-  thumbnail.py        # サムネイル
-  build.py            # 動画の組み立て
-  fetch.py            # いらすとやからイラストを取得
-  backdrop.py         # Pexels から背景動画を取得
-AGENTS.md             # エージェント向けの作業指示。新しいセッションが最初に読む
-DEVELOPMENT.md        # 開発方針
-```
-
-回ごとに変わるパスは `src/episode.py` が持つ。`config.py` は座標や色など
-**回によらない値だけ**を持つ。
-
-`assets/` に手で置くもの(いずれも git 管理外):
-
-| ファイル | 用途 |
-| --- | --- |
-| `endcard.mp4` | 末尾に付けるエンドカード動画。尺は実ファイルから読むので長さは自由 |
-| `backgrounds/*.mp4` | 背景に流す動画。`/backdrop` が取得。manifest.json だけ git 管理 |
-| `*.mp3` | BGM。最初の1本を使う(曲名はクレジットに使うのでそのまま置く) |
-
-中国うさぎの立ち絵と PSD は**リポジトリの外**(`../VOICEBOX/素材/うさぎ/`)を参照している。
-第三者の配布素材をうっかりコミットしないため。パスは `config.TACHIE_DIR`。
-
-## 雑学の選定
-
-台本の素材はアプリのデータベース(Neon / Postgres)から持ってくる。
-**元データは裏取り済み**なので、web検索での事実確認はしない。
-
-```bash
-python -m src.trivia --list 20 --full   # 未使用の上位を見る
-python -m src.trivia --show 112 16      # 指定IDの全文
-python -m src.trivia --mark 112 67 …    # 回の記録に書く(台本と同じ順に並べる)
-python -m src.trivia --used             # これまでの回で使ったもの
-```
-
-`--mark` に渡すIDの並びは**台本の項目の並びと同じにする**。1番目のIDが1項目目、
-という対応で `record.json` に入る。hee_count・category・DBの題は自動で写し取る。
-
-`hee_count` はアプリ内で「へぇ」ボタンが押された**強さの合計**(1人あたり1〜10)。
-実際の反応が数字で残っているので、面白さの推測より当てになる。
-
-### 接続
-
-`.env` に読み取り専用の接続文字列を1行だけ置く(**git管理外**)。
-
-```
-TRIVIA_DATABASE_URL=postgresql://video_ro:…@ep-….neon.tech/neondb?sslmode=require
-PEXELS_API_KEY=…                      # /backdrop で背景動画を探すときだけ
-```
-
-`src/trivia.py` は **SELECT しか実行しない**。使用済みの記録は DB ではなく
-回の `record.json` に残す。
-
-### Neon 側の設定でつまずいた点
-
-- **コンソールから作ったロールは `neon_superuser` を継承する。** 読み取り専用に
-  したいなら SQL で `CREATE ROLE` する必要がある
-- **`ALTER DEFAULT PRIVILEGES` は実行者が作るテーブルにしか効かない。**
-  アプリのテーブルは別のオーナーが作っているので `FOR ROLE <オーナー>` が要る
-- **`trivia` は RLS が有効。** SELECT を許すポリシーが `app_user` 限定だったため、
-  権限を付けても0件に見えた。`ALTER POLICY trivia_select_all ON public.trivia
-  TO app_user, video_ro;` で解決
-
-### 採用の順番
-
-**`hee_count` の高い順**。ただし古い雑学ほど票が積み上がっていて、
-id と hee_count の相関は **-0.65**(ID帯ごとの平均は 60.7 → 20.5 と3倍の開き)。
-単純な降順だと古いものから消費される。
-
-いまは在庫が306件あるので当面それでよい。**新しいものばかり残るようになったら**、
-ID帯ごとの相対評価(各帯の中での順位で選ぶ)に切り替える。
-
-`trivia_hees` は RLS で見えないため、投票人数で割った「1人あたりの強さ」は
-出せない。必要になったら集計ビューを作って `video_ro` に開ける。
-
-## 画面の作り
-
-1項目は2枚の画面でできている。**振りとイラストを同時に出す → 溜めてオチを足す。**
-オチが出るのは振りを読み終えてから(`REVEAL_GAP` の 0.9 秒)。
-
-**オチと同時にうさぎの顔が変わる**(`MASCOT_EXPRESSION` → `MASCOT_EXPRESSION_PUNCH`)。
-表情は PSD から作ったものを使う。切り抜き位置を `MASCOT_CROP` で固定してあるので、
-表情を変えても体は1ピクセルも動かない(表情ごとの外接矩形で切ると、記号を足した
-表情を混ぜたときに立ち絵が跳ねる)。
-
-画面は `layout.py` が**透過1枚**として作り、背景動画に重ねるだけにしている。
-プレビューと本番で描画ロジックが分かれないようにするため。
-
-**振りは下端基準**(`SETUP_BOTTOM`)。上端基準だと2行になったとき下に伸びて
-中央の円に食い込む。下端で揃えれば行数が変わっても円との間隔は一定になる。
-
-**立ち絵の右の空きにアプリの宣伝を置いている**(`PROMO_*`)。角を丸めたアイコンと
-「毎日雑学 で検索！」。オチの下・立ち絵の横は他に使い道がないので使う。
-セーフエリアの内側に収めてあり、余白は右67px・下27px・立ち絵から32px・
-オチから37px。文言を長くすると右にはみ出すので、変えたら `--item` を何個か
-書き出して確認する。
-
-### 背景動画
-
-素材は `assets/backgrounds/` に置き、**出所とライセンスを同じ場所の
-`manifest.json` に必ず記録する**。動画ファイルは git に入れないので、
-記録だけがリポジトリに残る。`/publish` はこれを読んでクレジットを書く。
-
-```bash
-python -m src.backdrop --show                     # 持っている素材と出所
-python -m src.backdrop --list "cat"               # 縦の候補を探す
-python -m src.backdrop --get 12345 --query "cat"  # 取得する
-python -m src.backdrop --drop pexels_12345.mp4    # 捨てる(記録も一緒に)
-```
-
-`PEXELS_API_KEY` が `.env` に要る。選び方は `.claude/commands/backdrop.md`。
-`--list` は候補の見た目を `out/backdrop_candidates.png` に並べる(表だけでは選べない)。
-
-**背景は文字の下地なので、動きが遅く明るさが一定の映像を選ぶ。** 動きの速さは
-静止画では分からないので、取得後にフレーム間の差分を測って既存素材と比べる。
-実測では寝ている猫が 4.5〜5.0、既存の Adobe Stock が 6.7〜11.5、雪で遊ぶ犬が
-30.7 だった(最後のものは落とした)。
-
-**Pexels は User-Agent を名乗らないと 403 (Cloudflare error 1010) で弾く。**
-urllib の既定 `Python-urllib/3.x` が対象になっている。
-
-横長(1920x1080)の素材は中央を切り出して縦型にするので、左右がかなり落ちる。
-被写体が中央にある素材を選ぶこと。**縦の素材ならこの問題は起きない**ので、
-`--list` は既定で縦だけを探す。
-
-映像の上に黒文字を置くと読みにくいので、**白いベールを一枚敷いている**
-(`SCRIM_ALPHA`、既定 0.62)。4本すべてのクリップで 0/35/50/62/75% を書き出して
-比べ、いちばん暗いクリップでも安定して読める 62% にした。
-
-**背景は1項目につき1本を通しで流す。** 画面が切り替わるたびにクリップを取り直すと
-頭出しに戻り、止まったり動いたりして見える(`Scene` 単位で同じクリップの続きを
-切り出している)。割り当てはシャッフルし(`BG_SHUFFLE_SEED`)、隣り合う項目が
-同じ映像にならないようにしている。
-
-### 実際の見え方を確かめる
-
-```bash
-python -m src.preview --item 1 --ui
-```
-
-`out/preview_ui.png` に、Shorts のUIを模した重ね絵が出る。何が隠れるかを
-セーフエリアの枠より具体的に確認できる。
-
-**本物のUI画像は使っていない。** Google の著作物なので、位置と大きさだけを
-写した自前のモックを描いている(`layout.with_youtube_ui`)。アイコンの形は
-似せていない。目的は遮蔽の確認なので、それで足りる。
-
-**引っかかったところ:** `ImageDraw.Draw(im, "RGBA")` は半透明を**合成せず上書き**
-する。帯が真っ黒になって「全部隠れる」ように見えてしまった。別レイヤに描いて
-`alpha_composite` する必要がある。
-
-## 立ち絵の表情差分
-
-配布素材の PSD から表情を組み立てて書き出せる(readme に「改変・加工しての
-利用も可能」と明記されているのを確認済み)。
-
-```bash
-python -m src.tachie --list                       # 選べるパーツを見る
-python -m src.tachie --all-presets                # config の表情を全部作る
-python -m src.tachie --make 目=にっこり 口=あは -o smile.png
-```
-
-素材は PSDTool 向けの命名規則(`*` は同じグループで1つだけ表示、`!` は常に表示)
-に従っているので、それに合わせて表示を切り替えてから合成する。選べるのは
-**口19種 / 目9種 / 眉4種 / 顔色5種 / 記号5種 / 腕は左右5種ずつ**。
-**衣装は既定(巫女服)のまま触らない。**
-
-表情の組み合わせは `config.EXPRESSIONS`。体の姿勢は `BASE_POSE` で固定していて、
-配布されている中立PNGと同じ(いなば抱え + 右腕を横に)。表情を変えても体がズレない。
-
-**引っかかったところ:** `psd.composite()` はそのままだと PSD に保存された
-合成済みプレビュー(RGB・アルファなし)を返すことがあり、背景が黒く潰れた PNG が
-できる。`force=True` でレイヤーから組み直させる必要がある。
-腕のグループは「衣装差分」と「巫女服」の下に同名で2つあるので、両方に同じ選択を
-当てないと食い違う。
-
-## サムネイル
-
-```bash
-python -m src.thumbnail                    # 回の thumbnail.png
-python -m src.thumbnail --item 3
-python -m src.thumbnail --expression 困り
-python -m src.thumbnail --no-mask          # 伏せ字を出さない
-```
-
-**一番引きのある項目の振りだけを出して、オチは「？」で伏せる。** 答えが気になる
-状態で止めるのが狙い。うさぎは動画より大きく置いて主役にしている(高さ900px)。
-
-どの項目を使うかは `config.THUMB_ITEM`(1始まり)。機械的に決められないので
-台本を読み比べて選ぶ。選び方の目安は `.claude/commands/thumbnail.md` にある。
-**振りは台本の文言をそのまま使う。釣るために書き換えない。**
-
-描画は `layout.py` の部品を使い回している。文字の折り返しやフチの出方を動画と
-揃えるため。ベールは動画より薄く(0.55)して背景の写真を少し見せている。
-
-## 音声
-
-読み上げ・BGM・エンドカードの音を numpy で1本の wav にまとめてから moviepy に
-渡す。どこで何が鳴るかが1か所で読める。
-
-BGM は読み上げ中だけ `BGM_DUCK` まで下げ、**エンドカードの手前で終わらせる**。
-エンドカードには自前の音が入っているので、重ねると両方の音楽がぶつかって濁る。
-
-エンドカードでは `ENDCARD_VOICE`(「毎日雑学更新中！」)をうさぎに言わせる。
-**読み終わりがエンドカードの終端に来るように置く**ので、「更新中」がロゴと文字の
-出るタイミングに重なる。エンドカードを差し替えても長さを測り直して合わせる。
-
-## 速さのために自前にしたところ
-
-書き出しは最初 5.4 秒の動画に 69 秒かかっていた。計測して2つ直した。
-
-- **背景素材を先に縦型へ変換して貯める**(`vertical_cache`)。元素材は 49Mbps の
-  1920x1080 で、毎フレーム切り出して拡大するのが重かった
-- **アルファ合成を自前で書いた**(`_blend`)。moviepy の `CompositeVideoClip` でも
-  同じ絵になるが、マスク処理が1フレーム 190ms かかっていた。整数演算で直に
-  重ねると 80ms 台になる(出力が moviepy と丸め誤差1以内で一致することを確認済み)
-
-## 調整したいとき
-
-| やりたいこと | 触る場所(すべて `src/config.py`) |
-| --- | --- |
-| 文字の大きさ・位置 | `FONT_SIZE` / `SETUP_BOTTOM` / `PUNCH_Y` |
-| イラストの円 | `CIRCLE_CENTER_Y` / `CIRCLE_DIAMETER` |
-| うさぎの位置・大きさ | `MASCOT_X` / `MASCOT_BOTTOM` / `MASCOT_HEIGHT` |
-| うさぎの表情 | `MASCOT_EXPRESSION`(振り) / `MASCOT_EXPRESSION_PUNCH`(オチ) |
-| アプリの宣伝 | `PROMO_TEXT` / `PROMO_X` / `PROMO_CENTER_Y` / `PROMO_SHOW` |
-| 間の取り方 | `REVEAL_GAP`(振り→オチ) / `ITEM_GAP`(項目間) |
-| 背景の見え方 | `SCRIM_ALPHA` / `BG_SHUFFLE_SEED` |
-| BGM | `BGM_VOLUME` / `BGM_DUCK` / `BGM_FADE_OUT` |
-| サムネイル | `THUMB_*` |
-
-レイアウトを詰めるときは `python -m src.preview` が1秒以内で終わるので、
-これを見ながら回す。動画を回して座標を探さない。
-
-## 実装前に調べた結果
-
-方針書の「実装前に必ず調べる」に従って調べたもの。判断の記録。
-
-| 対象 | 調べたもの | 判断 |
-| --- | --- | --- |
-| 日本語の折り返し | **budoux** (Google製 / PyPI v0.9.1 / 2026-08 更新) | **採用**。文節で切れるので「メスのほ/うが」のような不自然な改行が消える |
-| VOICEVOX クライアント | voicevox-client (PyPI v1.1.0 / 2025-08 更新) | **不採用**。audio_query と synthesis しか包んでおらず、必要な `/speakers`(名前→style_id解決)と `/accent_phrases`(voicecheck用)が無い。async専用な点も噛み合わない |
-| 音声処理・ダッキング | pydub (最終リリース 2021-03) | **不採用**。5年更新が止まっている。numpy で足りる範囲 |
-| テキストの縁取り | Pillow の `stroke_width` | **採用**。自前で描かない |
-| PSD の読み書き | **psd-tools** (PyPI v1.19.0 / 2026-09 更新) | **採用**。PSDTool 互換の素材をそのまま扱える。pytoshop(2018年で更新停止)は書き込み用途で今回は不要 |
-| いらすとや検索 | Blogger の公開フィード | **採用**。サイトのHTMLを解析せずにキーワード検索できる |
-| 背景動画の取得 | **Pexels API** / Pixabay API / Openverse | **Pexels を採用**。動画検索で `orientation=portrait` が使えて縦素材を直接探せる。`user.name` が返るので作者を明記できる。**Pixabay は動画では orientation が効かない**(画像のみ)。Openverse は動画を扱っていない |
-| 円形マスク | Pillow の `ImageDraw.ellipse` + `paste(mask)` | **採用**。ライブラリ不要 |
-
-## 環境で確認したこと
-
-- **BIZ UDPGothic Bold は単体ファイルではない。** `BIZ-UDGothicB.ttc` の
-  `index=1` にある(index=0 は等幅の BIZ UDGothic)
-- 中国うさぎ = ノーマル61 / おどろき62 / こわがり63 / へろへろ64。
-  ただし方針どおり **ID はハードコードせず `/speakers` から名前で解決する**
-- Python 3.12.10(方針書は3.11。支障なし)
-
-## クレジット
-
-VOICEVOX はクレジット表記が必須。動画内には出さず**概要欄**に記載する
-(`/publish` が自動で含める)。
+**VOICEVOX のクレジットは必須。** 動画内には出さず概要欄に入れる
+(`/publish` が自動で含める)。消さないこと。
 
 ```
 VOICEVOX:中国うさぎ
 ```
 
-中国うさぎには共通規約とは別にキャラクター個別の利用規約がある。
-立ち絵に公式イラストを使っているので、**収益化前にガイドラインを確認すること**。
+**第三者の素材をリポジトリに入れない。** 立ち絵・PSD・BGM・エンドカード・
+背景動画・イラストはすべて `.gitignore` 済み。**ただし出所の記録は残す**
+(`manifest.json`)。記録が無い素材は使わない。
 
-いらすとやは商用利用でも1つの制作物に20点までが無償。1本7点なら範囲内。
+**`.env` を絶対にコミットしない。** DBの接続文字列とAPIキーが入っている。
 
-## これから
+中国うさぎには共通規約とは別にキャラクター個別の利用規約がある。立ち絵に公式
+イラストを使っているので、**収益化前にガイドラインを確認すること**。
+いらすとやは1つの制作物に20点までが無償(1本7点なら範囲内)。
 
-1. ~~`preview.py` — 静止画1枚でレイアウトを詰める~~
-2. ~~`voice.py` — VOICEVOX で音声生成~~
-3. ~~`build.py` — 1項目だけ動画化してタイミングを詰める~~
-4. ~~通しで7項目 + タイトル + BGM + エンドカード~~ ← いまここ
+## もっと知りたいとき
 
-残っているのは `/publish` の実行と効果音。
-
-## 方針書からの変更
-
-DEVELOPMENT.md の確定事項からの差分。利用者の判断で変わったもの。
-
-- **締めなし → エンドカード動画あり。** `assets/endcard.mp4`(尺は実ファイルから読む)
-- **サムネイル生成を追加。** 方針書では未実装扱いだった
-- **立ち絵の表情差分を PSD から生成できるようにした**
-- **背景は単色 → 動画を流す。** `layout.base()` に背景のコマを渡すと、その上に
-  白いベール(`SCRIM_ALPHA`)を敷いてから要素を重ねる。プレビューも既定で
-  背景付きになる(`--no-bg` で単色)
-- **1項目の流れを3段階から2段階に。** 「振り → イラスト → オチ」ではなく
-  **振りとイラストを同時に出して、溜めてからオチ**
-- **背景動画は項目ごとにランダムな別クリップ** (`BG_SHUFFLE_SEED`)。
-  隣り合う項目は同じ映像にならない
-- **立ち絵は左右反転して右寄せ** (`MASCOT_FLIP`)。画面の内側を向かせるため
-- **振りは下端基準** (`SETUP_BOTTOM`)。上端基準だと2行になったとき円に食い込むため
+| 見るもの | 中身 |
+| --- | --- |
+| [DESIGN.md](DESIGN.md) | 画面の作り、なぜその設計にしたか、調べた結果、落とし穴 |
+| [AGENTS.md](AGENTS.md) | Claude Code に作業させるときの決まりごと |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | 当初の開発方針(原典) |
+| `.claude/commands/` | 各スラッシュコマンドが何をするか |
+| `src/config.py` | 座標・色・フォント・尺。**見た目の数値は全部ここ** |
