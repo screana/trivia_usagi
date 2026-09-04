@@ -24,9 +24,13 @@ assets/*.wav
 assets/*.m4a
 
 # エンドカード動画・背景動画。サイズが大きく、ストック素材はライセンス品。
+# 背景は manifest.json だけを追跡する。素材そのものは追わないが、
+# **どこから来た何なのかの記録は残す**(/publish がクレジットに使う)。
 assets/endcard.mp4
 assets/*.mov
 assets/*.mp4
+assets/backgrounds/*
+!assets/backgrounds/manifest.json
 
 # 生成物。台本から作り直せる。
 out/

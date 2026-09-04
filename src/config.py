@@ -3,9 +3,28 @@
 
 ここの値は初期値であって確定仕様ではない。preview.py で見ながら動かす前提。
 """
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def env(name: str) -> str | None:
+    """.env から値を1つ読む。環境変数が優先。
+
+    APIキーや接続文字列が入るので、**呼び出し側は中身を表示しないこと。**
+    """
+    value = os.environ.get(name)
+    if value:
+        return value
+    path = ROOT / ".env"
+    if not path.exists():
+        return None
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if line.startswith(f"{name}=") and not line.startswith("#"):
+            return line.split("=", 1)[1].strip().strip("'\"")
+    return None
 
 # --------------------------------------------------------------------- 出力
 
@@ -32,8 +51,12 @@ MASCOT = TACHIE_DIR / "中国うさぎ立ち絵素材2_0000.png"
 _BGM_FILES = sorted((ROOT / "assets").glob("*.mp3"))
 BGM = _BGM_FILES[0] if _BGM_FILES else ROOT / "assets" / "bgm.mp3"
 ENDCARD = ROOT / "assets" / "endcard.mp4"
-# 背景に流す動画。順に使い、足りなければ先頭に戻る
-BACKGROUNDS = sorted((ROOT / "assets").glob("AdobeStock_*.mov"))
+# 背景に流す動画。順に使い、足りなければ先頭に戻る。
+# 出所とライセンスは manifest.json に残す(第三者の素材なので必須)
+BACKGROUND_DIR = ROOT / "assets" / "backgrounds"
+BACKGROUND_MANIFEST = BACKGROUND_DIR / "manifest.json"
+BACKGROUNDS = sorted(p for p in BACKGROUND_DIR.glob("*")
+                     if p.suffix.lower() in (".mp4", ".mov", ".webm"))
 # 背景の並び順を決める種。変えると割り当てが変わる。固定なのは書き出しを
 # 見比べられるようにするため
 BG_SHUFFLE_SEED = 7

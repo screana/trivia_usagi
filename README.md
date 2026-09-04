@@ -95,6 +95,7 @@ python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
 | `/review [項目]` | プレビューを実際に見てレイアウトの事故を潰す |
 | `/voicecheck` | 読み上げの読みをカタカナで検証(音声を作る前に) |
 | `/thumbnail [項目] [表情]` | サムネイルを作る。振りだけ出してオチは伏せる |
+| `/backdrop [検索語]` | 背景に流す動画を Pexels から探して足す |
 | `/publish` | 概要欄・タイトル案・ハッシュタグを作る |
 
 ## ファイル構成
@@ -120,6 +121,7 @@ src/
   thumbnail.py        # サムネイル
   build.py            # 動画の組み立て
   fetch.py            # いらすとやからイラストを取得
+  backdrop.py         # Pexels から背景動画を取得
 AGENTS.md             # エージェント向けの作業指示。新しいセッションが最初に読む
 DEVELOPMENT.md        # 開発方針
 ```
@@ -132,7 +134,7 @@ DEVELOPMENT.md        # 開発方針
 | ファイル | 用途 |
 | --- | --- |
 | `endcard.mp4` | 末尾に付けるエンドカード動画。尺は実ファイルから読むので長さは自由 |
-| `AdobeStock_*.mov` | 背景に流す動画。項目ごとにランダムな1本を使う |
+| `backgrounds/*.mp4` | 背景に流す動画。`/backdrop` が取得。manifest.json だけ git 管理 |
 | `*.mp3` | BGM。最初の1本を使う(曲名はクレジットに使うのでそのまま置く) |
 
 中国うさぎの立ち絵と PSD は**リポジトリの外**(`../VOICEBOX/素材/うさぎ/`)を参照している。
@@ -162,6 +164,7 @@ python -m src.trivia --used             # これまでの回で使ったもの
 
 ```
 TRIVIA_DATABASE_URL=postgresql://video_ro:…@ep-….neon.tech/neondb?sslmode=require
+PEXELS_API_KEY=…                      # /backdrop で背景動画を探すときだけ
 ```
 
 `src/trivia.py` は **SELECT しか実行しない**。使用済みの記録は DB ではなく
@@ -213,8 +216,22 @@ ID帯ごとの相対評価(各帯の中での順位で選ぶ)に切り替える�
 
 ### 背景動画
 
-素材は 1920x1080 の横長なので、中央を切り出して縦型にしている。左右がかなり
-落ちるので、被写体が中央にある素材を選ぶこと。
+素材は `assets/backgrounds/` に置き、**出所とライセンスを同じ場所の
+`manifest.json` に必ず記録する**。動画ファイルは git に入れないので、
+記録だけがリポジトリに残る。`/publish` はこれを読んでクレジットを書く。
+
+```bash
+python -m src.backdrop --show                     # 持っている素材と出所
+python -m src.backdrop --list "cat"               # 縦の候補を探す
+python -m src.backdrop --get 12345 --query "cat"  # 取得する
+```
+
+`PEXELS_API_KEY` が `.env` に要る。選び方は `.claude/commands/backdrop.md`。
+**背景は文字の下地なので、動きが遅く明るさが一定の映像を選ぶ。**
+
+横長(1920x1080)の素材は中央を切り出して縦型にするので、左右がかなり落ちる。
+被写体が中央にある素材を選ぶこと。**縦の素材ならこの問題は起きない**ので、
+`--list` は既定で縦だけを探す。
 
 映像の上に黒文字を置くと読みにくいので、**白いベールを一枚敷いている**
 (`SCRIM_ALPHA`、既定 0.62)。4本すべてのクリップで 0/35/50/62/75% を書き出して
@@ -337,6 +354,7 @@ BGM は読み上げ中だけ `BGM_DUCK` まで下げ、**エンドカードの�
 | テキストの縁取り | Pillow の `stroke_width` | **採用**。自前で描かない |
 | PSD の読み書き | **psd-tools** (PyPI v1.19.0 / 2026-09 更新) | **採用**。PSDTool 互換の素材をそのまま扱える。pytoshop(2018年で更新停止)は書き込み用途で今回は不要 |
 | いらすとや検索 | Blogger の公開フィード | **採用**。サイトのHTMLを解析せずにキーワード検索できる |
+| 背景動画の取得 | **Pexels API** / Pixabay API / Openverse | **Pexels を採用**。動画検索で `orientation=portrait` が使えて縦素材を直接探せる。`user.name` が返るので作者を明記できる。**Pixabay は動画では orientation が効かない**(画像のみ)。Openverse は動画を扱っていない |
 | 円形マスク | Pillow の `ImageDraw.ellipse` + `paste(mask)` | **採用**。ライブラリ不要 |
 
 ## 環境で確認したこと

@@ -31,18 +31,12 @@ class TriviaError(Exception):
 
 
 def database_url() -> str:
-    url = os.environ.get("TRIVIA_DATABASE_URL")
+    url = config.env("TRIVIA_DATABASE_URL")
     if url:
         return url
-    env = config.ROOT / ".env"
-    if env.exists():
-        for line in env.read_text(encoding="utf-8-sig").splitlines():
-            line = line.strip()
-            if line.startswith("TRIVIA_DATABASE_URL=") and not line.startswith("#"):
-                return line.split("=", 1)[1].strip().strip("'\"")
     raise TriviaError(
         "TRIVIA_DATABASE_URL が見つかりません。\n"
-        f"  {env} に読み取り専用の接続文字列を1行で書いてください。"
+        f"  {config.ROOT / '.env'} に読み取り専用の接続文字列を1行で書いてください。"
     )
 
 

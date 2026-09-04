@@ -157,31 +157,29 @@ def background_path(index: int):
 
 def background_frame(index: int, seconds: float = 2.0) -> Image.Image | None:
     """背景クリップから1コマ取り出す。プレビューを実際の見え方に近づけるため。"""
+    import io
     import subprocess
 
     import imageio_ffmpeg
-    import numpy as np
 
     path = background_path(index)
     if path is None:
         return None
+    # PNG で受け取る。生バイト列だと解像度を別途知る必要があり、素材の縦横が
+    # 変わったとき(縦の素材を混ぜたときなど)に静かに崩れる
     command = [
         imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error",
         "-ss", str(seconds), "-i", str(path),
-        "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
+        "-frames:v", "1", "-f", "image2pipe", "-c:v", "png", "-",
     ]
     raw = subprocess.run(command, capture_output=True).stdout
     if not raw:
         return None
-    # 素材は 1920x1080 固定。取り出したバイト数から高さを割り出す
-    width = 1920
-    height = len(raw) // (width * 3)
-    return Image.fromarray(np.frombuffer(raw[: width * height * 3], dtype=np.uint8)
-                           .reshape(height, width, 3))
+    return Image.open(io.BytesIO(raw)).convert("RGB")
 
 
 def fit_cover(image: Image.Image) -> Image.Image:
-    """画面いっぱいになるよう拡大して中央を切り出す。素材は16:9なので左右が落ちる。"""
+    """画面いっぱいになるよう拡大して中央を切り出す。横長の素材は左右が落ちる。"""
     ratio = max(config.WIDTH / image.width, config.HEIGHT / image.height)
     scaled = image.resize((max(1, round(image.width * ratio)), max(1, round(image.height * ratio))),
                           Image.LANCZOS)
