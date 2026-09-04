@@ -4,7 +4,7 @@
     python -m src.trivia --list 20        # 未使用の上位20件を見る
     python -m src.trivia --show 112 16    # 指定IDの全文を見る
     python -m src.trivia --used           # 使用済みの一覧
-    python -m src.trivia --mark 112 16 …  # 使用済みに記録する
+    python -m src.trivia --mark 112 16 …  # 台本の順に並べて回の記録に書く
 
 `hee_count` はアプリ内で「へぇ」ボタンが押された強さの合計(1人あたり1〜10)。
 実際の反応が数字で残っているので、面白さの目安として素直に使える。
@@ -15,18 +15,15 @@
 
 接続情報は .env の TRIVIA_DATABASE_URL。読み取り専用ロールで繋ぐ前提で、
 このモジュールは SELECT しか実行しない。使用済みの記録は DB ではなく
-リポジトリ側の used_trivia.json に残す。
+回のディレクトリの record.json に残す(episodes/001/record.json)。
 """
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
-from datetime import date
-from pathlib import Path
 
-from . import config
+from . import config, episode
 
 
 class TriviaError(Exception):
@@ -61,28 +58,30 @@ def connect():
 # --------------------------------------------------------------------- 使用済み
 
 
-def load_used() -> dict:
-    if config.USED_TRIVIA.exists():
-        return json.loads(config.USED_TRIVIA.read_text(encoding="utf-8"))
-    return {}
+def mark_used(ep, ids: list[int]) -> list[dict]:
+    """使った雑学を回の記録に書く。IDは**台本の項目と同じ順**に並べること。
 
+    hee_count は時間とともに増えるので、採用した時点の値をここで写し取る。
+    あとから「なぜこれを選んだのか」を見るのに要る。
+    """
+    rows = {row["id"]: row for row in by_ids(ids)}
+    missing = [i for i in ids if i not in rows]
+    if missing:
+        raise TriviaError("DBに無いID: %s" % ", ".join(str(i) for i in missing))
 
-def used_ids() -> set[int]:
-    return {int(i) for entry in load_used().values() for i in entry["ids"]}
+    record = episode.load_record(ep)
+    record["items"] = [
+        {"id": i, "hee": rows[i]["hee_count"], "category": rows[i]["category"],
+         "title": rows[i]["title"]}
+        for i in ids
+    ]
+    episode.save_record(ep, record)
 
-
-def mark_used(ids: list[int], note: str) -> None:
-    used = load_used()
-    key = date.today().isoformat()
-    # 同じ日に2本作ることもあるので、既にあれば連番を足す
-    suffix = 1
-    while key in used:
-        suffix += 1
-        key = f"{date.today().isoformat()}-{suffix}"
-    used[key] = {"ids": sorted(ids), "note": note}
-    config.USED_TRIVIA.write_text(
-        json.dumps(used, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    items = episode.load_script(ep).get("items") or []
+    if len(items) != len(ids):
+        print("注意: 台本は %d 項目、記録は %d 件です。順番と数を合わせてください"
+              % (len(items), len(ids)), file=sys.stderr)
+    return record["items"]
 
 
 # --------------------------------------------------------------------- 取得
@@ -144,26 +143,35 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--full", action="store_true", help="--list で全文も出す")
     parser.add_argument("--show", type=int, nargs="+", metavar="ID", help="指定IDの全文を見る")
     parser.add_argument("--used", action="store_true", help="使用済みの一覧")
-    parser.add_argument("--mark", type=int, nargs="+", metavar="ID", help="使用済みに記録する")
-    parser.add_argument("--note", default="", help="--mark に添えるメモ(動画名など)")
+    parser.add_argument("--mark", type=int, nargs="+", metavar="ID",
+                        help="回の記録に書く。台本の項目と同じ順に並べる")
+    episode.add_argument(parser)
     args = parser.parse_args(argv)
 
     try:
         if args.used:
-            used = load_used()
-            if not used:
+            eps = episode.episodes()
+            if not eps:
                 print("まだ何も使っていません")
                 return 0
-            for key, entry in sorted(used.items()):
-                print("%-14s %-30s %s" % (key, entry.get("note", ""),
-                                          ", ".join(str(i) for i in entry["ids"])))
-            print("\n合計 %d 件" % len(used_ids()))
+            for ep in eps:
+                record = episode.load_record(ep)
+                items = record.get("items", [])
+                print("回 %s  %s  %s" % (ep, record.get("created") or "", ep.title()))
+                for item in items:
+                    print("    %-5s hee=%-5s %s" % (item["id"], item.get("hee", ""),
+                                                    item.get("title", "")))
+                if not items:
+                    print("    (記録なし)")
+            print("\n合計 %d 件" % len(episode.used_ids()))
             return 0
 
         if args.mark:
-            mark_used(args.mark, args.note)
-            print("使用済みに記録しました: %s" % ", ".join(str(i) for i in args.mark))
-            print("  %s" % config.USED_TRIVIA)
+            ep = episode.resolve(args.ep)
+            written = mark_used(ep, args.mark)
+            print("回 %s の記録に %d 件書きました: %s" % (ep, len(written), ep.record))
+            for i, item in enumerate(written, start=1):
+                print("  %d. id=%-5s hee=%-5s %s" % (i, item["id"], item["hee"], item["title"]))
             return 0
 
         if args.show:
@@ -171,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.list:
-            exclude = used_ids()
+            exclude = episode.used_ids()
             rows = candidates(args.list, exclude)
             print("未使用の上位 %d 件 (使用済み %d 件を除外)\n" % (len(rows), len(exclude)))
             print_full(rows) if args.full else print_brief(rows)
@@ -179,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
 
         parser.print_help()
         return 1
-    except TriviaError as exc:
+    except (TriviaError, episode.EpisodeError) as exc:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""イラストを探して assets/images/ と manifest.json に入れる。
+"""イラストを探して回の images/ と manifest.json に入れる。
 
 どの絵を使うかの判断は人間 (または Claude Code) が行う前提で、
 このモジュールは検索と取得の手順だけを担う。
@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 from PIL import Image
 
-from . import config
+from . import config, episode
 
 FEED = "https://www.irasutoya.com/feeds/posts/default"
 UA = {"User-Agent": "Mozilla/5.0 (compatible; zatsugaku-pipeline/0.1)"}
@@ -65,27 +65,14 @@ def download(candidate: Candidate) -> Image.Image:
     return image.convert("RGBA")
 
 
-def load_manifest() -> dict:
-    if config.MANIFEST.exists():
-        return json.loads(config.MANIFEST.read_text(encoding="utf-8"))
-    return {}
-
-
-def save_manifest(manifest: dict) -> None:
-    config.MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    config.MANIFEST.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-
-
-def store(candidate: Candidate, slot: int, name: str | None = None) -> str:
+def store(ep, candidate: Candidate, slot: int, name: str | None = None) -> str:
     """画像を保存し、manifest に登録する。ファイル名を返す。"""
     image = download(candidate)
     filename = f"{slot:02d}_{name or 'image'}.png"
-    config.IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    image.save(config.IMAGES_DIR / filename)
+    ep.images.mkdir(parents=True, exist_ok=True)
+    image.save(ep.images / filename)
 
-    manifest = load_manifest()
+    manifest = episode.load_manifest(ep)
     manifest[str(slot)] = {
         "file": filename,
         "source": "いらすとや",
@@ -95,7 +82,7 @@ def store(candidate: Candidate, slot: int, name: str | None = None) -> str:
         "title": candidate.title,
         "url": candidate.page,
     }
-    save_manifest(manifest)
+    episode.write_json(ep.manifest, manifest)
     return filename
 
 
@@ -107,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pick", type=int, default=0, help="--get で使う候補の番号")
     parser.add_argument("--slot", type=int, help="台本の何項目目に入れるか (0始まり)")
     parser.add_argument("--name", help="保存するファイル名の一部")
+    episode.add_argument(parser)
     args = parser.parse_args(argv)
 
     if args.list:
@@ -123,9 +111,13 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(f"'{args.get}' の候補が見つかりません")
         if args.pick >= len(candidates):
             raise SystemExit(f"候補は {len(candidates)} 件です")
+        try:
+            ep = episode.resolve(args.ep)
+        except episode.EpisodeError as exc:
+            raise SystemExit(f"エラー: {exc}")
         time.sleep(THROTTLE)
-        filename = store(candidates[args.pick], args.slot, args.name)
-        print(f"slot {args.slot} <- {candidates[args.pick].title}  ({filename})")
+        filename = store(ep, candidates[args.pick], args.slot, args.name)
+        print(f"回 {ep} slot {args.slot} <- {candidates[args.pick].title}  ({filename})")
         return 0
 
     parser.print_help()

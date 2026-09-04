@@ -5,6 +5,42 @@
 
 **通しで動画が出るところまで完成。** タイトル + 雑学7項目 + エンドカード、BGM付き。
 
+## 回(エピソード)
+
+**1本の動画 = 1つの回。** 台本・記録・イラスト・音声・成果物は
+`episodes/001/` の下にまとまっている。
+
+```bash
+python -m src.episode                    # 回の一覧と、そろっていないものを見る
+python -m src.episode --new "タイトル"   # 次の番号で回を作る
+```
+
+どのコマンドも**既定は番号が一番大きい回**。過去回を触るときだけ `--ep 1` を付ける。
+
+```
+episodes/
+  001/
+    script.json      台本のみ                    [git 管理]
+    record.json      使った雑学のIDと hee、公開情報 [git 管理]
+    publish.md       概要欄                      [git 管理]
+    images/          イラスト + manifest.json     [manifest だけ git 管理]
+    audio/           読み上げ wav + ledger + mix  [管理外]
+    video.mp4        成果物                      [管理外]
+    thumbnail.png    成果物                      [管理外]
+```
+
+**なぜ回ごとに分けるか。** 以前は台本も動画も固定の名前だったので、2本目を作ると
+1本目が黙って消えた。回の中で閉じていれば過去回をそのまま見に行けるし、
+あとから作り直せる。
+
+**なぜ記録を台本の隣に置くか。** 使用済みの雑学を別ファイル(`used_trivia.json`)で
+持っていたときは、記録し忘れると静かにズレて、次回また同じ雑学が候補に出た。
+同じディレクトリに置けば、`python -m src.episode` の一覧に「記録 0/7」と出る。
+
+**`record.json` に hee を写し取っているのは**、`hee_count` が時間とともに増えて
+いくため。採用した時点の値が残っていないと、あとから「なぜこれを選んだのか」を
+たどれない。
+
 ## 使い方
 
 ```bash
@@ -15,13 +51,14 @@ python -m src.preview --item 3     # 3項目目
 python -m src.preview --title      # タイトルカード
 python -m src.preview --no-punch   # オチを出す前の状態
 python -m src.preview --ui        # ShortsのUIを重ねた版も出す
+python -m src.preview --ep 1      # 過去回で描く
 ```
 
 音声(VOICEVOX を起動しておくこと):
 
 ```bash
 python -m src.voice --check   # 読みをカタカナで確認(音声は作らない)
-python -m src.voice           # out/audio/ に 01_setup.wav 等を生成
+python -m src.voice           # 回の audio/ に 01_setup.wav 等を生成
 python -m src.voice --force   # 変わっていなくても作り直す
 ```
 
@@ -33,6 +70,9 @@ python -m src.build --item 2-4   # 範囲。項目間の間を見るとき用(16
 python -m src.build              # 通し (44秒で約4.5分)
 python -m src.build --no-endcard
 ```
+
+通しは回の `video.mp4` に出る。`--item` を付けた抜粋は確認用なので
+`out/video_item3.mp4` に出て、回のディレクトリを汚さない。
 
 `out/preview.png` と、セーフエリアを重ねた `out/preview_guide.png` が出る。
 1秒ほどで終わるので、レイアウトはこれを見ながら詰める。
@@ -50,7 +90,7 @@ python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
 
 | コマンド | 役割 |
 | --- | --- |
-| `/script [件数]` | DBから雑学を選んで台本を作る。振り/オチへの組み立ても |
+| `/script [件数]` | 回を作り、DBから雑学を選んで台本を組む |
 | `/images` | 各項目に合うイラストを探して manifest.json を作る |
 | `/review [項目]` | プレビューを実際に見てレイアウトの事故を潰す |
 | `/voicecheck` | 読み上げの読みをカタカナで検証(音声を作る前に) |
@@ -60,23 +100,18 @@ python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
 ## ファイル構成
 
 ```
-script.json           # 台本のみ。画像・話者・速度は書かない
-used_trivia.json      # 使用済みの雑学ID。DBは読み取り専用なのでこちらに記録
+episodes/             # 回ごとの一式(上の「回」を参照)
 .env                  # DBの接続文字列(git管理外)
-assets/
-  images/
-    manifest.json     # /images が生成。これだけ git 管理
-out/                  # すべて git 管理外
-  video.mp4           # 成果物
-  thumbnail.png       # 成果物
+out/                  # 回に属さないもの。すべて git 管理外
   preview.png         # 確認用。毎回上書きされる
   preview_guide.png   # セーフエリアを重ねた版
   preview_ui.png      # ShortsのUIを模した重ね絵(--ui のとき)
   thumbnail_guide.png
-  audio/              # 読み上げ。台本から再生成できる
-  cache/              # 作り直せる中間物(背景の縦型変換、合成済み音声)
+  video_item3.mp4     # --item で出した抜粋
+  cache/bg/           # 背景の縦型変換。素材は回によらず同じなので使い回す
 src/
   config.py           # 座標・色・フォント・速度をすべてここに
+  episode.py          # 回の解決とパス、記録の読み書き
   layout.py           # 描画。preview と build で共用
   preview.py          # 静止画1枚
   voice.py            # VOICEVOX。読みの検証もここ
@@ -88,6 +123,9 @@ src/
 AGENTS.md             # エージェント向けの作業指示。新しいセッションが最初に読む
 DEVELOPMENT.md        # 開発方針
 ```
+
+回ごとに変わるパスは `src/episode.py` が持つ。`config.py` は座標や色など
+**回によらない値だけ**を持つ。
 
 `assets/` に手で置くもの(いずれも git 管理外):
 
@@ -108,9 +146,12 @@ DEVELOPMENT.md        # 開発方針
 ```bash
 python -m src.trivia --list 20 --full   # 未使用の上位を見る
 python -m src.trivia --show 112 16      # 指定IDの全文
-python -m src.trivia --mark 112 16 …    # 使用済みに記録
-python -m src.trivia --used             # 使用済みの一覧
+python -m src.trivia --mark 112 67 …    # 回の記録に書く(台本と同じ順に並べる)
+python -m src.trivia --used             # これまでの回で使ったもの
 ```
+
+`--mark` に渡すIDの並びは**台本の項目の並びと同じにする**。1番目のIDが1項目目、
+という対応で `record.json` に入る。hee_count・category・DBの題は自動で写し取る。
 
 `hee_count` はアプリ内で「へぇ」ボタンが押された**強さの合計**(1人あたり1〜10)。
 実際の反応が数字で残っているので、面白さの推測より当てになる。
@@ -124,7 +165,7 @@ TRIVIA_DATABASE_URL=postgresql://video_ro:…@ep-….neon.tech/neondb?sslmode=re
 ```
 
 `src/trivia.py` は **SELECT しか実行しない**。使用済みの記録は DB ではなく
-`used_trivia.json` に残す。
+回の `record.json` に残す。
 
 ### Neon 側の設定でつまずいた点
 
@@ -229,7 +270,7 @@ python -m src.tachie --make 目=にっこり 口=あは -o smile.png
 ## サムネイル
 
 ```bash
-python -m src.thumbnail                    # out/thumbnail.png
+python -m src.thumbnail                    # 回の thumbnail.png
 python -m src.thumbnail --item 3
 python -m src.thumbnail --expression 困り
 python -m src.thumbnail --no-mask          # 伏せ字を出さない
@@ -327,7 +368,7 @@ VOICEVOX:中国うさぎ
 3. ~~`build.py` — 1項目だけ動画化してタイミングを詰める~~
 4. ~~通しで7項目 + タイトル + BGM + エンドカード~~ ← いまここ
 
-残っているのは `/script`(裏取り込みの台本生成)と `/publish` の実行。
+残っているのは `/publish` の実行と効果音。
 
 ## 方針書からの変更
 

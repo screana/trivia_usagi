@@ -13,19 +13,16 @@ WIDTH = 1080
 HEIGHT = 1920
 FPS = 30
 
-SCRIPT_JSON = ROOT / "script.json"
-# どの雑学を使ったか。DB は読み取り専用なのでこちら側に記録する
-USED_TRIVIA = ROOT / "used_trivia.json"
-IMAGES_DIR = ROOT / "assets" / "images"
-MANIFEST = IMAGES_DIR / "manifest.json"
-OUT_DIR = ROOT / "out"
-AUDIO_DIR = OUT_DIR / "audio"
+# 1本の動画 = 1つの回。台本・記録・素材・成果物は episodes/001/ にまとまる。
+# 個々のパスは src/episode.py が持つ(回ごとに変わるので config には置けない)
+EPISODES_DIR = ROOT / "episodes"
 
-# 作り直せる中間物はここにまとめる。out/ の直下は成果物と確認用だけにする
+# 回に属さないもの置き場。使い捨てのプレビューと、全回で使い回すキャッシュ
+OUT_DIR = ROOT / "out"
 CACHE_DIR = OUT_DIR / "cache"
-# 背景素材を縦型に変換したもの。毎回変換すると書き出しが数倍遅くなるので貯める
+# 背景素材を縦型に変換したもの。毎回変換すると書き出しが数倍遅くなるので貯める。
+# 素材は回によらず同じなので、回の外に置いて使い回す
 BG_CACHE = CACHE_DIR / "bg"
-MIX_WAV = CACHE_DIR / "mix.wav"      # 読み上げ+BGM+エンドカードを1本にしたもの
 
 # 立ち絵は第三者の配布素材なので、リポジトリの外を参照する
 TACHIE_DIR = ROOT.parent / "VOICEBOX" / "素材" / "うさぎ"

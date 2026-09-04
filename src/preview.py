@@ -4,39 +4,28 @@
     python -m src.preview            # 1項目目
     python -m src.preview --item 3   # 3項目目
     python -m src.preview --title    # タイトルカード
+    python -m src.preview --ep 1     # 過去回で描く
 
 表示タイミングは無視して、全要素が出た状態を描く。
-out/preview.png と、セーフエリアを重ねた out/preview_guide.png を書き出す。
+書き出し先は out/preview.png と、セーフエリアを重ねた out/preview_guide.png。
+確認用の使い捨てなので、回のディレクトリではなく out/ に置く。
 """
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
 from PIL import Image
 
-from . import config, layout
+from . import config, episode, layout
 
 
-def load_script() -> dict:
-    if not config.SCRIPT_JSON.exists():
-        raise SystemExit(f"台本がありません: {config.SCRIPT_JSON}")
-    return json.loads(config.SCRIPT_JSON.read_text(encoding="utf-8"))
-
-
-def load_manifest() -> dict:
-    if not config.MANIFEST.exists():
-        return {}
-    return json.loads(config.MANIFEST.read_text(encoding="utf-8"))
-
-
-def illustration_for(index: int, manifest: dict) -> tuple[Image.Image | None, str | None]:
+def illustration_for(ep, index: int, manifest: dict) -> tuple[Image.Image | None, str | None]:
     entry = manifest.get(str(index))
     if not entry:
         return None, None
-    path = config.IMAGES_DIR / entry["file"]
+    path = ep.images / entry["file"]
     if not path.exists():
         print(f"警告: 画像がありません: {path}", file=sys.stderr)
         return None, entry.get("attribution")
@@ -52,9 +41,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-bg", action="store_true", help="背景動画を敷かず単色で描く")
     parser.add_argument("--ui", action="store_true",
                         help="ShortsのUIを模した重ね絵も出す(何が隠れるかの確認)")
+    episode.add_argument(parser)
     args = parser.parse_args(argv)
 
-    script = load_script()
+    try:
+        ep = episode.resolve(args.ep)
+        script = episode.load_script(ep)
+    except episode.EpisodeError as exc:
+        raise SystemExit(f"エラー: {exc}")
 
     background = None if args.no_bg else layout.background_frame(0 if args.title else args.item - 1)
 
@@ -67,7 +61,8 @@ def main(argv: list[str] | None = None) -> int:
         if not 1 <= args.item <= len(items):
             raise SystemExit(f"--item は 1〜{len(items)} で指定してください")
         item = items[args.item - 1]
-        illustration, attribution = illustration_for(args.item - 1, load_manifest())
+        illustration, attribution = illustration_for(ep, args.item - 1,
+                                                     episode.load_manifest(ep))
         image = layout.render_item(
             setup=item["setup"],
             punch=None if args.no_punch else item["punch"],
@@ -85,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.ui:
         layout.with_youtube_ui(image).convert("RGB").save(config.OUT_DIR / "preview_ui.png")
 
-    print(f"{label}")
+    print(f"回 {ep} / {label}")
     print(f"  {config.OUT_DIR / 'preview.png'}")
     print(f"  {config.OUT_DIR / 'preview_guide.png'} (セーフエリア重ね)")
     if args.ui:

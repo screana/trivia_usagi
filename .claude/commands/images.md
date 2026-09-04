@@ -1,8 +1,8 @@
 ---
-description: 台本の各項目に合うイラストを探して assets/images/ と manifest.json を作る
+description: 台本の各項目に合うイラストを探して回の images/ と manifest.json を作る
 ---
 
-`script.json` の各項目に合うイラストを用意する。
+台本の各項目に合うイラストを用意する。対象は既定で一番新しい回。
 
 ## 優先順位
 
@@ -30,12 +30,12 @@ python -m src.fetch --list "タコ"
 python -m src.fetch --get "タコ" --pick 2 --slot 0 --name octopus
 ```
 
-`manifest.json` は `src/fetch.py` が書く。いらすとやは表示義務がないので
+`episodes/NNN/images/manifest.json` は `src/fetch.py` が書く。いらすとやは表示義務がないので
 `attribution` は `null` になる。
 
 ## いらすとや以外を使うとき
 
-`assets/images/` に手で置いて、`manifest.json` に追記する。
+`episodes/NNN/images/` に手で置いて、同じ場所の `manifest.json` に追記する。
 
 ```json
 "3": {

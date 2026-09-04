@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """サムネイルを作る。
 
-    python -m src.thumbnail                 # out/thumbnail.png
+    python -m src.thumbnail                 # episodes/001/thumbnail.png
     python -m src.thumbnail --item 3        # 3項目目で作る
     python -m src.thumbnail --expression 困り
     python -m src.thumbnail --no-mask       # 伏せ字を出さない
@@ -20,26 +20,18 @@ from pathlib import Path
 
 from PIL import Image
 
-from . import config, layout
+from . import config, episode, layout
 
 
 class ThumbnailError(Exception):
     pass
 
 
-def load_script() -> dict:
-    if not config.SCRIPT_JSON.exists():
-        raise ThumbnailError(f"台本がありません: {config.SCRIPT_JSON}")
-    return json.loads(config.SCRIPT_JSON.read_text(encoding="utf-8"))
-
-
-def illustration_for(index: int):
-    if not config.MANIFEST.exists():
-        return None
-    entry = json.loads(config.MANIFEST.read_text(encoding="utf-8")).get(str(index))
+def illustration_for(ep, index: int):
+    entry = episode.load_manifest(ep).get(str(index))
     if not entry:
         return None
-    path = config.IMAGES_DIR / entry["file"]
+    path = ep.images / entry["file"]
     return Image.open(path).convert("RGBA") if path.exists() else None
 
 
@@ -64,7 +56,7 @@ def mascot(expression: str) -> Image.Image | None:
     return image.resize((max(1, int(image.width * height / image.height)), height), Image.LANCZOS)
 
 
-def render(item: dict, index: int, expression: str, mask: bool) -> Image.Image:
+def render(ep, item: dict, index: int, expression: str, mask: bool) -> Image.Image:
     background = layout.background_frame(index)
 
     # ベールは動画より薄くして、背景の写真を少し見せる
@@ -90,7 +82,7 @@ def render(item: dict, index: int, expression: str, mask: bool) -> Image.Image:
         setup, ((canvas.width - setup.width) // 2, config.THUMB_SETUP_BOTTOM - setup.height)
     )
 
-    illustration = illustration_for(index)
+    illustration = illustration_for(ep, index)
     if illustration is not None:
         circle = layout.circular(illustration, config.THUMB_CIRCLE_DIAMETER)
         canvas.alpha_composite(
@@ -120,27 +112,30 @@ def main(argv: list[str] | None = None) -> int:
                         help="うさぎの表情")
     parser.add_argument("--no-mask", action="store_true", help="伏せ字を出さない")
     parser.add_argument("-o", "--out", type=Path)
+    episode.add_argument(parser)
     args = parser.parse_args(argv)
 
     try:
-        script = load_script()
+        ep = episode.resolve(args.ep)
+        script = episode.load_script(ep)
         items = script["items"]
         index = (args.item - 1) if args.item else (config.THUMB_ITEM - 1)
         if not 0 <= index < len(items):
             raise ThumbnailError(f"--item は 1〜{len(items)} で指定してください")
 
-        image = render(items[index], index, args.expression, not args.no_mask)
-        out = args.out or (config.OUT_DIR / "thumbnail.png")
+        image = render(ep, items[index], index, args.expression, not args.no_mask)
+        out = args.out or ep.thumbnail
         out.parent.mkdir(parents=True, exist_ok=True)
         image.convert("RGB").save(out)
-        layout.with_safe_area(image).convert("RGB").save(
-            out.with_name(out.stem + "_guide.png")
-        )
-        print(f"{index + 1}項目目「{items[index]['setup']}」/ 表情 {args.expression}")
+        # ガイドは見るためだけのものなので回のディレクトリに残さない
+        guide = config.OUT_DIR / "thumbnail_guide.png"
+        guide.parent.mkdir(parents=True, exist_ok=True)
+        layout.with_safe_area(image).convert("RGB").save(guide)
+        print(f"回 {ep} / {index + 1}項目目「{items[index]['setup']}」/ 表情 {args.expression}")
         print(f"  {out}")
-        print(f"  {out.with_name(out.stem + '_guide.png')} (セーフエリア重ね)")
+        print(f"  {guide} (セーフエリア重ね)")
         return 0
-    except ThumbnailError as exc:
+    except (ThumbnailError, episode.EpisodeError) as exc:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1
 

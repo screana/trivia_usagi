@@ -5,7 +5,7 @@
     python -m src.voice --check    # 読みをカタカナで確認する(音声は作らない)
     python -m src.voice --force    # 変わっていなくても作り直す
 
-振りとオチは別ファイルにする(`out/audio/01_setup.wav`)。
+振りとオチは別ファイルにする(`episodes/001/audio/01_setup.wav`)。
 それぞれの再生時間をそのまま表示タイミングに使うため。
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from hashlib import sha1
 from pathlib import Path
 
-from . import config
+from . import config, episode
 
 
 class VoiceError(Exception):
@@ -112,8 +112,8 @@ class Ledger:
     data: dict
 
     @classmethod
-    def load(cls) -> "Ledger":
-        path = config.AUDIO_DIR / "ledger.json"
+    def load(cls, ep) -> "Ledger":
+        path = ep.audio / "ledger.json"
         if path.exists():
             return cls(path, json.loads(path.read_text(encoding="utf-8")))
         return cls(path, {})
@@ -147,12 +147,6 @@ def clips(script: dict) -> list[tuple[str, str]]:
     return out
 
 
-def load_script() -> dict:
-    if not config.SCRIPT_JSON.exists():
-        raise VoiceError(f"台本がありません: {config.SCRIPT_JSON}")
-    return json.loads(config.SCRIPT_JSON.read_text(encoding="utf-8"))
-
-
 def check(script: dict, style_id: int) -> int:
     """読みをカタカナで並べる。固有名詞や数字の読み違いをここで見つける。"""
     print(f"{config.SPEAKER_NAME} / {config.SPEAKER_STYLE} (style_id={style_id})")
@@ -165,14 +159,14 @@ def check(script: dict, style_id: int) -> int:
     return 0
 
 
-def generate(script: dict, style_id: int, force: bool) -> int:
+def generate(ep, script: dict, style_id: int, force: bool) -> int:
     version = engine_version()
-    ledger = Ledger.load()
-    config.AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    ledger = Ledger.load(ep)
+    ep.audio.mkdir(parents=True, exist_ok=True)
 
     created = reused = 0
     for name, text in clips(script):
-        target = config.AUDIO_DIR / f"{name}.wav"
+        target = ep.audio / f"{name}.wav"
         digest = Ledger.digest(text, style_id, version)
         if not force and target.exists() and ledger.data.get(name) == digest:
             reused += 1
@@ -185,7 +179,7 @@ def generate(script: dict, style_id: int, force: bool) -> int:
 
     ledger.save()
     print(f"音声: {created} 件生成 / {reused} 件は変更なしのため再利用")
-    print(f"  {config.AUDIO_DIR}")
+    print(f"  {ep.audio}")
     return 0
 
 
@@ -194,15 +188,18 @@ def main(argv: list[str] | None = None) -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="読みをカタカナで確認する")
     parser.add_argument("--force", action="store_true", help="変わっていなくても作り直す")
+    episode.add_argument(parser)
     args = parser.parse_args(argv)
 
     try:
-        script = load_script()
+        ep = episode.resolve(args.ep)
+        script = episode.load_script(ep)
         style_id = resolve_style_id(config.SPEAKER_NAME, config.SPEAKER_STYLE)
+        print(f"回 {ep}「{script.get('title', '')}」")
         if args.check:
             return check(script, style_id)
-        return generate(script, style_id, args.force)
-    except VoiceError as exc:
+        return generate(ep, script, style_id, args.force)
+    except (VoiceError, episode.EpisodeError) as exc:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1
 

@@ -2,8 +2,8 @@
 description: 概要欄・タイトル案・ハッシュタグを作る
 ---
 
-`script.json` と `assets/images/manifest.json` から投稿用のテキストを作り、
-`out/publish.md` に書き出す。
+回の `script.json` と `images/manifest.json` から投稿用のテキストを作り、
+`episodes/NNN/publish.md` に書き出す。ここは回の記録として git に残る。
 
 ## タイトル
 

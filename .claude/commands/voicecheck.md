@@ -6,7 +6,7 @@ VOICEVOX の `/accent_phrases` は読みをカタカナで返すので、
 **音声を作る前に**固有名詞や漢字の読み間違いを見つけられる。
 
 ```bash
-python -m src.voice --check
+python -m src.voice --check          # 既定は一番新しい回
 ```
 
 台本の全テキストについて、原文と読み(カタカナ)を並べて出す。

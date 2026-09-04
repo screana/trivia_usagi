@@ -9,9 +9,14 @@ assets/mascot.png
 *.psb
 *.zip
 
-# 収集したイラスト。/images で取り直せる。
-assets/images/*
-!assets/images/manifest.json
+# 回ごとのディレクトリ。追跡するのは台本(script.json)・記録(record.json)・
+# 概要欄(publish.md)・manifest.json だけ。
+# イラストと音声と動画は第三者の素材が混ざるうえ大きく、台本から作り直せる。
+episodes/*/images/*
+!episodes/*/images/manifest.json
+episodes/*/audio/
+episodes/*/video.mp4
+episodes/*/thumbnail.png
 
 # BGM。配布元の規約がある。ファイル名は曲名のまま置かれるので拡張子で弾く。
 assets/*.mp3

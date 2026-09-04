@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from . import config, layout
+from . import config, episode, layout
 
 SAMPLE_RATE = 24000          # VOICEVOX の出力に合わせる
 
@@ -69,23 +69,11 @@ def wav_duration(path: Path) -> float:
         return w.getnframes() / w.getframerate()
 
 
-def load_script() -> dict:
-    if not config.SCRIPT_JSON.exists():
-        raise BuildError(f"台本がありません: {config.SCRIPT_JSON}")
-    return json.loads(config.SCRIPT_JSON.read_text(encoding="utf-8"))
-
-
-def load_manifest() -> dict:
-    if not config.MANIFEST.exists():
-        return {}
-    return json.loads(config.MANIFEST.read_text(encoding="utf-8"))
-
-
-def illustration_for(index: int, manifest: dict):
+def illustration_for(ep, index: int, manifest: dict):
     entry = manifest.get(str(index))
     if not entry:
         return None, None
-    path = config.IMAGES_DIR / entry["file"]
+    path = ep.images / entry["file"]
     if not path.exists():
         raise BuildError(f"画像がありません: {path}")
     return Image.open(path).convert("RGBA"), entry.get("attribution")
@@ -102,9 +90,9 @@ def parse_range(spec: str | None) -> tuple[int, int] | None:
     return first, last
 
 
-def plan(script: dict, only: tuple[int, int] | None) -> tuple[list[Scene], list[Cue]]:
+def plan(ep, script: dict, only: tuple[int, int] | None) -> tuple[list[Scene], list[Cue]]:
     """絵の並びと音の位置を決める。ここだけ読めば構成がわかるようにしてある。"""
-    manifest = load_manifest()
+    manifest = episode.load_manifest(ep)
     scenes: list[Scene] = []
     cues: list[Cue] = []
     clock = 0.0
@@ -127,9 +115,9 @@ def plan(script: dict, only: tuple[int, int] | None) -> tuple[list[Scene], list[
         backgrounds = backgrounds[1:]
 
     for (i, item), background in zip(items, backgrounds):
-        illustration, attribution = illustration_for(i - 1, manifest)
-        setup_wav = config.AUDIO_DIR / f"{i:02d}_setup.wav"
-        punch_wav = config.AUDIO_DIR / f"{i:02d}_punch.wav"
+        illustration, attribution = illustration_for(ep, i - 1, manifest)
+        setup_wav = ep.audio / f"{i:02d}_setup.wav"
+        punch_wav = ep.audio / f"{i:02d}_punch.wav"
         for path in (setup_wav, punch_wav):
             if not path.exists():
                 raise BuildError(f"音声がありません: {path}\n  python -m src.voice で作ってください")
@@ -173,7 +161,7 @@ def decode(path: Path) -> np.ndarray:
 
 
 def build_audio(cues: list[Cue], total: float, endcard_at: float | None,
-                out_path: Path) -> Path:
+                out_path: Path, endcard_voice: Path | None = None) -> Path:
     length = int(round(total * SAMPLE_RATE))
     track = np.zeros(length, dtype=np.float32)
 
@@ -193,9 +181,8 @@ def build_audio(cues: list[Cue], total: float, endcard_at: float | None,
 
         # エンドカードの一言。読み終わりが終端に来るように置くので、
         # ロゴと文字が出るタイミングに「更新中」が重なる
-        line = config.AUDIO_DIR / "endcard.wav"
-        if config.ENDCARD_VOICE and line.exists():
-            voice = decode(line)
+        if config.ENDCARD_VOICE and endcard_voice and endcard_voice.exists():
+            voice = decode(endcard_voice)
             at = total - len(voice) / SAMPLE_RATE - config.ENDCARD_VOICE_TAIL
             start = max(int(round(at * SAMPLE_RATE)), int(round(endcard_at * SAMPLE_RATE)))
             end = min(start + len(voice), length)
@@ -390,15 +377,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-endcard", action="store_true", help="エンドカードを付けない")
     parser.add_argument("--fps", type=int, default=config.FPS)
     parser.add_argument("-o", "--out", type=Path)
+    episode.add_argument(parser)
     args = parser.parse_args(argv)
 
     try:
-        script = load_script()
+        ep = episode.resolve(args.ep)
+        script = episode.load_script(ep)
         selection = parse_range(args.item)
-        scenes, cues = plan(script, selection)
-    except BuildError as exc:
+        scenes, cues = plan(ep, script, selection)
+    except (BuildError, episode.EpisodeError) as exc:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1
+
+    print(f"回 {ep}「{script.get('title', '')}」")
 
     body = sum(scene.duration for scene in scenes)
     endcard = not args.no_endcard and selection is None and config.ENDCARD.exists()
@@ -419,9 +410,14 @@ def main(argv: list[str] | None = None) -> int:
                                   if endcard else "なし"))
 
     audio_path = build_audio(cues, total, body if endcard else None,
-                             config.MIX_WAV)
-    suffix = f"_item{args.item}" if args.item else ""
-    out = args.out or (config.OUT_DIR / f"video{suffix}.mp4")
+                             ep.mix, ep.audio / "endcard.wav")
+    # 抜粋は確認用なので回のディレクトリに残さず out/ に出す
+    if args.out:
+        out = args.out
+    elif args.item:
+        out = config.OUT_DIR / f"video_item{args.item}.mp4"
+    else:
+        out = ep.video
 
     started = time.time()
     render(scenes, audio_path, out, args.fps, endcard)
