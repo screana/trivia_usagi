@@ -280,18 +280,25 @@ def vertical_cache(path: Path) -> Path:
         return cached
 
     print(f"  背景を縦型に変換: {path.name}")
-    # 切り出す幅は ffmpeg 側で入力の高さから求めさせる (素材の解像度に依存しない)。
-    # 幅を偶数に丸めてから 1080x1920 に拡大する。
-    crop = f"crop=trunc(ih*{config.WIDTH}/{config.HEIGHT}/2)*2:ih"
+    # 縦横どちらに長い素材でも中央を 9:16 で切り出す。min ではみ出す側だけを削る
+    # ので、横長なら幅が、9:16より縦長(1080x2048 など)なら高さが削られる。
+    # 幅で決め打ちすると縦長の素材で入力より大きい切り出しを要求して落ちる。
+    crop = (f"crop=w=min(iw\\,trunc(ih*{config.WIDTH}/{config.HEIGHT}/2)*2)"
+            f":h=min(ih\\,trunc(iw*{config.HEIGHT}/{config.WIDTH}/2)*2)")
+    # 変換中のファイルを本番の名前で置かない。失敗すると 0 バイトのファイルが
+    # 残り、タイムスタンプが新しいので次回それが「変換済み」として使われる
+    temp = cached.with_name(cached.stem + ".part.mp4")
     command = [
         imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", str(path),
         "-vf", f"{crop},scale={config.WIDTH}:{config.HEIGHT}",
         "-an", "-c:v", "libx264", "-crf", "20", "-preset", "veryfast",
-        str(cached),
+        str(temp),
     ]
     if subprocess.run(command).returncode != 0:
+        temp.unlink(missing_ok=True)
         raise BuildError(f"背景の変換に失敗しました: {path}")
+    temp.replace(cached)
     return cached
 
 
@@ -409,8 +416,22 @@ def main(argv: list[str] | None = None) -> int:
     print("  エンドカード: %s" % (f"{config.ENDCARD.name} ({endcard_len:.2f}s)"
                                   if endcard else "なし"))
 
+    # エンドカードの一言は毎回入る前提のもの。無ければ黙って抜けるのではなく止める
+    # (項目の音声と同じ扱いにする)
+    endcard_voice = ep.audio / "endcard.wav"
+    if endcard and config.ENDCARD_VOICE:
+        if not endcard_voice.exists():
+            print(f"エラー: エンドカードの音声がありません: {endcard_voice}\n"
+                  "  python -m src.voice で作ってください", file=sys.stderr)
+            return 1
+        voice_len = wav_duration(endcard_voice)
+        voice_at = total - voice_len - config.ENDCARD_VOICE_TAIL
+        # 入ったことと、どこに置かれたかを毎回出す。抜けても気づけるように
+        print("  うさぎの一言: 「%s」 %.2fs (%.2fs 〜 %.2fs)"
+              % (config.ENDCARD_VOICE, voice_len, voice_at, voice_at + voice_len))
+
     audio_path = build_audio(cues, total, body if endcard else None,
-                             ep.mix, ep.audio / "endcard.wav")
+                             ep.mix, endcard_voice)
     # 抜粋は確認用なので回のディレクトリに残さず out/ に出す
     if args.out:
         out = args.out
