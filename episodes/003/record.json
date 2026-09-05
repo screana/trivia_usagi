@@ -1,0 +1,50 @@
+{
+  "episode": 3,
+  "created": "2026-09-05",
+  "published": null,
+  "url": null,
+  "items": [
+    {
+      "id": 172,
+      "hee": 94,
+      "category": "生物",
+      "title": "オオイヌノフグリの由来、かなり直球"
+    },
+    {
+      "id": 80,
+      "hee": 82,
+      "category": "デザイン",
+      "title": "飛行機窓が丸い理由"
+    },
+    {
+      "id": 11,
+      "hee": 77,
+      "category": "科学",
+      "title": "サイコロの目の確率"
+    },
+    {
+      "id": 124,
+      "hee": 71,
+      "category": "食べ物",
+      "title": "柚子胡椒に黒コショウは一切入っていない"
+    },
+    {
+      "id": 35,
+      "hee": 72,
+      "category": "言語・言葉",
+      "title": "SOSの意味"
+    },
+    {
+      "id": 41,
+      "hee": 72,
+      "category": "スポーツ",
+      "title": "テニスの得点"
+    },
+    {
+      "id": 10,
+      "hee": 71,
+      "category": "生活",
+      "title": "電話の「もしもし」の由来"
+    }
+  ]
+}
