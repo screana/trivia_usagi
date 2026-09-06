@@ -1,0 +1,51 @@
+{
+  "0": {
+    "file": "00_mona_lisa.jpg",
+    "source": "Wikimedia Commons",
+    "attribution": "レオナルド・ダ・ヴィンチ / Public Domain",
+    "title": "Mona Lisa face 800x800px",
+    "url": "https://commons.wikimedia.org/wiki/File:Mona_Lisa_face_800x800px.jpg"
+  },
+  "1": {
+    "file": "01_airplane_meal.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "機内食のイラスト",
+    "url": "https://www.irasutoya.com/2016/02/blog-post_185.html"
+  },
+  "2": {
+    "file": "02_search_engine.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "検索エンジンを使う人のイラスト",
+    "url": "https://www.irasutoya.com/2016/07/blog-post_36.html"
+  },
+  "3": {
+    "file": "03_dolphin.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "バンドウイルカのイラスト",
+    "url": "https://www.irasutoya.com/2015/09/blog-post.html"
+  },
+  "4": {
+    "file": "04_one_yen.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "一円玉のイラスト（お金・硬貨）",
+    "url": "https://www.irasutoya.com/2013/04/blog-post_5311.html"
+  },
+  "5": {
+    "file": "05_ok_sign.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "OKのサインのイラスト",
+    "url": "https://www.irasutoya.com/2020/02/ok.html"
+  },
+  "6": {
+    "file": "06_bottled_coffee.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "ペットボトルコーヒーのイラスト",
+    "url": "https://www.irasutoya.com/2018/11/blog-post_595.html"
+  }
+}
