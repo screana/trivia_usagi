@@ -1,0 +1,50 @@
+{
+  "episode": 4,
+  "created": "2026-09-06",
+  "published": null,
+  "url": null,
+  "items": [
+    {
+      "id": 36,
+      "hee": 73,
+      "category": "芸術・文化",
+      "title": "モナ・リザの眉毛"
+    },
+    {
+      "id": 17,
+      "hee": 71,
+      "category": "科学",
+      "title": "機内食の味付けは濃い"
+    },
+    {
+      "id": 30,
+      "hee": 71,
+      "category": "IT・テクノロジー",
+      "title": "Googleの名前"
+    },
+    {
+      "id": 170,
+      "hee": 71,
+      "category": "生物",
+      "title": "イルカは片目ずつ眠る"
+    },
+    {
+      "id": 15,
+      "hee": 70,
+      "category": "生活",
+      "title": "1円玉の製造コスト"
+    },
+    {
+      "id": 136,
+      "hee": 68,
+      "category": "言語・言葉",
+      "title": "『OK』の由来"
+    },
+    {
+      "id": 227,
+      "hee": 67,
+      "category": "食べ物",
+      "title": "ペットボトルの「コーヒー」と「コーヒー飲料」は違う"
+    }
+  ]
+}
