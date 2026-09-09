@@ -164,6 +164,61 @@ EXPRESSIONS = {
     "感心":   {**BASE_POSE, "目": "うっとり",    "口": "ほほえみ", "眉": "普通眉"},
 }
 
+# --------------------------------------------------------------------- 写真投稿
+
+# TikTokの写真投稿(カルーセル)用。表紙1枚 + 雑学1件ずつ7枚 = 8枚。
+# 描画だけはブラウザに任せる。アプリ「毎日雑学」の見た目をCSSでそのまま書けて、
+# 手描きより短く済むため。Windows標準のEdgeを使い、新しい依存は足さない
+BROWSERS = [
+    Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+    Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
+    Path("C:/Program Files/Google/Chrome/Application/chrome.exe"),
+]
+
+# 下から300pxはキャプションやボタンが乗る。動画(SAFE_BOTTOM)より浅いのは
+# 写真投稿のほうがUIの占有が小さいため
+PHOTO_SAFE_BOTTOM = 300
+PHOTO_MARGIN = 54              # 画面の左右と上の余白
+
+# 色はアプリから写した(constants/Colors.ts, components/TriviaCard.tsx)。
+# アプリの装飾(浮かぶ「?」・キラキラ・電球の丸・見出し下の帯)は載せない。
+# 2件並べた版で試したところ画面がうるさく、読ませたい文字が負けた
+PHOTO_BG = "#FFFFFF"
+PHOTO_CARD = "#FFFFFF"
+PHOTO_BORDER = "#EEEEEE"
+PHOTO_PRIMARY = "#E60012"      # カテゴリバッジ
+PHOTO_TEXT = "#1A1A1A"         # オチ
+PHOTO_SUB = "#888888"          # 振りと補足
+PHOTO_RULE = "#F0F0F0"         # オチと補足のあいだの線
+PHOTO_PAGER = "#BBBBBB"
+
+PHOTO_CARD_RADIUS = 96
+PHOTO_CARD_BORDER = 8
+
+# 動画と同じ書体で揃える。FONT_PATH の中身(BIZ UDPGothic)を家族名で指す
+PHOTO_FONT = '"BIZ UDPGothic", "Yu Gothic UI", "Meiryo", sans-serif'
+
+PHOTO_ART_HEIGHT = 440
+PHOTO_CAT_SIZE = 30
+PHOTO_SETUP_SIZE = 42
+PHOTO_PUNCH_SIZE = 88
+PHOTO_NOTE_SIZE = 34
+PHOTO_PAGER_SIZE = 30
+# 補足が長い項目は素だと溢れるので、収まるまで補足→振り→オチの順に縮める。
+# その下限。ここまで縮めても入らなければ切れたまま出す(見れば分かる)
+PHOTO_NOTE_MIN = 24
+PHOTO_SETUP_MIN = 24
+PHOTO_PUNCH_MIN = 60
+
+# 表紙。カードを使わず、大きい文字とイラスト1点だけ。
+# 「N選」の N は台本の項目数から入る
+PHOTO_COVER_LEAD = "誰かに話したくなる"
+PHOTO_COVER_BIG = "面白い"
+PHOTO_COVER_WORD = "雑学"      # ここだけ PHOTO_PRIMARY で出す
+PHOTO_COVER_LEAD_SIZE = 62
+PHOTO_COVER_BIG_SIZE = 190
+PHOTO_COVER_ART_HEIGHT = 460
+
 # --------------------------------------------------------------------- 音声
 
 SPEAKER_NAME = "中国うさぎ"     # style_id は /speakers から名前で解決する

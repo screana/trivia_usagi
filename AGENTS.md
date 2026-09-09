@@ -19,6 +19,7 @@
 | レイアウトの確認 | `.claude/commands/review.md` |
 | 読み方の確認 | `.claude/commands/voicecheck.md` |
 | サムネイル | `.claude/commands/thumbnail.md` |
+| 写真投稿の8枚 | `.claude/commands/photo.md` |
 | 概要欄 | `.claude/commands/publish.md` |
 | 背景素材を足す | `.claude/commands/backdrop.md` |
 
@@ -29,6 +30,7 @@
 | [README.md](README.md) | 導入と、1本作る手順。動かす人向け |
 | [DESIGN.md](DESIGN.md) | 画面の作りと、なぜその設計にしたか。調べた結果と落とし穴 |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | 当初の開発方針(原典) |
+| [PHOTO.md](PHOTO.md) | 写真投稿版の設計。なぜその形にしたか |
 
 判断に迷ったら DESIGN.md を見る。**同じ落とし穴を二度踏まないために書いてある。**
 
@@ -122,9 +124,11 @@ ffmpeg が閉じ、切り出したサブクリップを読む段で落ちる(Win
 
 ## 進め方
 
-0. **`git pull`** — 始める前に必ず。使用済みの雑学は手元の `episodes/` から
-   数えているので、pull しないと**他の人が使った雑学を再度使ってしまう**。
-   エラーにならないので気づけない
+0. **`git pull`** — 始める前に必ず。**遅れていると各コマンドが止まる**
+   (`episode.check_fresh()`)。pull しないと、使用済みの雑学を数え損ねて
+   **他の人が使った雑学を再度使う**し、回の既定は「手元で番号が一番大きい回」なので
+   **古い回や更新前の台本で作る**。どちらも件数も番号も辻褄が合うので、
+   止める仕組みが無いと誰も気づけない
 1. `/script` — 回を作り、DBから雑学を選び、振り/オチに組む。
    **台本と記録ができたらコミットして push する**(回の番号を先に押さえるため。
    動画ができてから push だと、その間に同じ番号を取られる)

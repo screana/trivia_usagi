@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -72,6 +73,10 @@ class Episode:
         return self.dir / "thumbnail.png"
 
     @property
+    def photos(self) -> Path:
+        return self.dir / "photos"
+
+    @property
     def publish(self) -> Path:
         return self.dir / "publish.md"
 
@@ -100,8 +105,45 @@ def latest() -> Episode | None:
     return found[-1] if found else None
 
 
+_FETCHED = False
+
+
+def check_fresh() -> None:
+    """remote に手元より新しいコミットがあれば止める。
+
+    **手順書に「先に git pull」と書いても飛ばされる。** 飛ばした結果は静かで、
+    回の既定は「手元で番号が一番大きい回」なので**古い回で作ってしまう**し、
+    台本が更新されていれば**更新前の振り・オチ**で作る。件数も回番号も辻褄が
+    合うため、どのチェックにも引っかからない。実際に第5回が remote にあるのに
+    004 で作りかけた。
+
+    **remote を見に行けないときは素通りする**(オフライン・upstream 無し)。
+    確認できないことを理由に作業を止めるほうが困る。
+    """
+    global _FETCHED
+    if _FETCHED:
+        return
+    _FETCHED = True
+    try:
+        # ponytail: 毎回 fetch する。遅くて邪魔になったら、最終 fetch 時刻を見て間引く
+        subprocess.run(["git", "fetch", "--quiet"], cwd=config.ROOT,
+                       check=True, capture_output=True, timeout=30)
+        behind = subprocess.run(["git", "rev-list", "--count", "HEAD..@{u}"],
+                                cwd=config.ROOT, check=True, capture_output=True,
+                                text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return
+    if behind.isdigit() and int(behind) > 0:
+        raise EpisodeError(
+            f"remote に手元より新しいコミットが {behind} 件あります。\n"
+            f"  git pull してから、もう一度実行してください\n"
+            f"  pull せずに進めると、古い回や更新前の台本で作ります(エラーになりません)"
+        )
+
+
 def resolve(number: int | None = None) -> Episode:
     """--ep の値から回を決める。指定がなければ一番新しい回。"""
+    check_fresh()
     if number is None:
         found = latest()
         if found is None:
@@ -118,6 +160,7 @@ def resolve(number: int | None = None) -> Episode:
 
 
 def create(title: str) -> Episode:
+    check_fresh()          # 番号を取り合わないよう、作る前にも見る
     number = (latest().number + 1) if latest() else 1
     target = Episode(number, config.EPISODES_DIR / ("%03d" % number))
     target.dir.mkdir(parents=True)

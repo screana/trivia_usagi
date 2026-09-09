@@ -17,6 +17,7 @@ episodes/*/images/*
 episodes/*/audio/
 episodes/*/video.mp4
 episodes/*/thumbnail.png
+episodes/*/photos/
 
 # BGM。配布元の規約がある。ファイル名は曲名のまま置かれるので拡張子で弾く。
 assets/*.mp3

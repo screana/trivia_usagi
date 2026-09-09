@@ -31,6 +31,15 @@ def load_font(size: int) -> ImageFont.FreeTypeFont:
         raise
 
 
+def phrases(text: str) -> list[str]:
+    """文節に割る。折り返してよい位置はここでしか決めない。
+
+    動画は wrap() が幅を見て折り、写真は photo.py が同じ切れ目に <wbr> を置く。
+    どちらも同じ切れ目になるよう、parser はこの1か所に閉じ込めておく。
+    """
+    return _PARSER.parse(text)
+
+
 def wrap(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
     """文節の切れ目を候補に、max_width に収まるよう折り返す。
 
@@ -39,7 +48,7 @@ def wrap(text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
     lines: list[str] = []
     for paragraph in text.split("\n"):
         current = ""
-        for chunk in _PARSER.parse(paragraph):
+        for chunk in phrases(paragraph):
             candidate = current + chunk
             if current and font.getlength(candidate) > max_width:
                 lines.append(current)
