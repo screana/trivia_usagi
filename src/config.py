@@ -132,11 +132,11 @@ PROMO_TEXT_SIZE = 46
 # --------------------------------------------------------------------- サムネイル
 
 # 選んだ項目の振りだけを出し、オチは伏せる。うさぎを大きめに置く
-THUMB_ITEM = 5                 # 使う項目(1始まり)。一番引きのある雑学を選ぶ。
+THUMB_ITEM = 6                 # 使う項目(1始まり)。一番引きのある雑学を選ぶ。
                                # 機械的に決められないので、都度考えて書き換える
 THUMB_EXPRESSION = "驚き"       # うさぎの表情 (config.EXPRESSIONS の名前)
 THUMB_SETUP_BOTTOM = 470       # 振りのブロック下端
-THUMB_SETUP_SIZE = 110
+THUMB_SETUP_SIZE = 92
 THUMB_CIRCLE_CENTER_Y = 760
 THUMB_CIRCLE_DIAMETER = 540
 THUMB_MASK_TEXT = "？"          # オチの代わりに出す文字。空にすると何も出さない

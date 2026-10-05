@@ -1,0 +1,54 @@
+{
+  "0": {
+    "file": "00_crow.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "カラスのイラスト（鳥）",
+    "url": "https://www.irasutoya.com/2013/04/blog-post_9238.html"
+  },
+  "1": {
+    "file": "01_spade_ace.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "トランプのイラスト「エースのカード」",
+    "url": "https://www.irasutoya.com/2013/06/blog-post_4367.html"
+  },
+  "2": {
+    "file": "02_kagamimochi.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "鏡餅のイラスト",
+    "url": "https://www.irasutoya.com/2012/03/blog-post_5171.html"
+  },
+  "3": {
+    "file": "03_camel.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "コブがたれたラクダのイラスト",
+    "url": "https://www.irasutoya.com/2021/10/blog-post_21.html"
+  },
+  "4": {
+    "file": "04_spacesuit.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "宇宙服を着た宇宙飛行士のイラスト（男性）",
+    "url": "https://www.irasutoya.com/2015/04/blog-post_600.html"
+  },
+  "5": {
+    "file": "05_hamburger.png",
+    "source": "いらすとや",
+    "attribution": null,
+    "title": "ハンバーガーのイラスト",
+    "url": "https://www.irasutoya.com/2016/12/blog-post_298.html"
+  },
+  "6": {
+    "file": "06_emoticon.png",
+    "source": "Wikimedia Commons",
+    "attribution": null,
+    "title": "Emoticon Smile Face.svg",
+    "author": "IkamusumeFan",
+    "license": "Public domain (PD-text)",
+    "license_url": "https://commons.wikimedia.org/wiki/Template:PD-text",
+    "url": "https://commons.wikimedia.org/wiki/File:Emoticon_Smile_Face.svg"
+  }
+}
